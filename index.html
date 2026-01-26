@@ -403,6 +403,213 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   margin-top:6px;
 }
 
+  /* ===== Right stats panel ===== */
+.shell{
+  grid-template-columns: 320px 1fr 360px; /* + stats */
+}
+
+.stats{
+  height:100%;
+  padding:14px;
+  border-left: 1px solid var(--panelBorder);
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
+  backdrop-filter: blur(10px);
+  overflow:auto;
+}
+
+.shell.collapsed{
+  grid-template-columns: 68px 1fr 360px;
+}
+
+.stats-card{
+  padding:14px;
+}
+
+.stats-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.tab{
+  border:1px solid rgba(168,85,247,.16);
+  background: rgba(255,255,255,.85);
+  padding:8px 10px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:12px;
+}
+.tab.active{
+  background: linear-gradient(135deg, rgba(168,85,247,.18), rgba(192,132,252,.14));
+  border-color: rgba(168,85,247,.35);
+}
+
+.stats-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.select{
+  border:1px solid rgba(168,85,247,.16);
+  background: rgba(255,255,255,.90);
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:800;
+  font-size:12px;
+  outline:none;
+}
+
+.togglebtn{
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(168,85,247,.10);
+  border-radius:12px;
+  padding:8px 10px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:12px;
+}
+
+.donut-wrap{
+  margin-top:14px;
+  display:grid;
+  place-items:center;
+}
+
+.donut{
+  width:260px;
+  height:260px;
+  position:relative;
+}
+
+.donut svg{
+  width:100%;
+  height:100%;
+  transform: rotate(-90deg);
+  overflow:visible;
+}
+
+.donut .center{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  pointer-events:none;
+}
+
+.center .big{
+  font-size:44px;
+  font-weight:1000;
+  letter-spacing:.4px;
+  line-height:1;
+}
+.center .small{
+  margin-top:6px;
+  font-size:12px;
+  color: var(--muted);
+  font-weight:800;
+}
+
+.legend{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.leg-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(168,85,247,.12);
+  background: rgba(255,255,255,.72);
+  font-size:13px;
+}
+
+.dot{
+  width:10px; height:10px;
+  border-radius:999px;
+  flex:0 0 10px;
+  box-shadow:0 8px 18px rgba(0,0,0,.10);
+}
+
+.leg-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.leg-left span{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-weight:900;
+}
+.leg-right{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+}
+.leg-right b{ font-weight:1000; }
+.leg-right small{ color:var(--muted); font-weight:900; }
+
+.bars{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.bar{
+  border:1px solid rgba(168,85,247,.12);
+  background: rgba(255,255,255,.72);
+  border-radius:14px;
+  padding:10px;
+}
+
+.barhead{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+.bartrack{
+  height:12px;
+  border-radius:999px;
+  background: rgba(168,85,247,.12);
+  overflow:hidden;
+}
+.barfill{
+  height:100%;
+  border-radius:999px;
+  width:0%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  transition: width .25s ease;
+}
+
+/* Responsive: hide stats under content on small screens */
+@media (max-width:1100px){
+  .shell{ grid-template-columns: 320px 1fr; }
+  .stats{ display:none; }
+}
+
 @media (max-width:860px){
   .shell{ grid-template-columns: 1fr; }
   .sidebar{
@@ -508,7 +715,43 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
       </div>
     </main>
   </div>
+    <!-- Right Stats -->
+    <aside class="stats">
+      <div class="panel stats-card">
+        <div class="stats-top">
+          <div style="font-weight:1000;">Stats</div>
+          <button class="togglebtn" id="chartToggle">Circular</button>
+        </div>
 
+        <div class="tabs">
+          <button class="tab active" data-range="today">Today</button>
+          <button class="tab" data-range="week">This Week</button>
+          <button class="tab" data-range="month">This Month</button>
+        </div>
+
+        <div class="stats-controls">
+          <select class="select" id="groupBy">
+            <option value="project">Project</option>
+            <option value="task">Task</option>
+          </select>
+        </div>
+
+        <div class="donut-wrap" id="donutWrap">
+          <div class="donut">
+            <svg viewBox="0 0 120 120" id="donutSvg"></svg>
+            <div class="center">
+              <div class="big" id="donutTotal">0</div>
+              <div class="small">Minutes</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bars" id="barsWrap" style="display:none;"></div>
+
+        <div class="legend" id="legend"></div>
+      </div>
+    </aside>
+ </div>
 <script>
 /* =========================
    Projects (fixed) + Storage
@@ -1279,6 +1522,244 @@ updateSelectedLabels();
 setMode("focus");
 renderWeeklyLog();
 render();
+  /* =========================
+   Stats panel (Right)
+========================= */
+const STAT_UI_KEY = "pomo_stats_ui_v1";
+let statUI = loadJSON(STAT_UI_KEY, { range:"week", view:"donut", groupBy:"project" });
+
+const donutSvg = document.getElementById("donutSvg");
+const donutTotalEl = document.getElementById("donutTotal");
+const legendEl = document.getElementById("legend");
+const donutWrap = document.getElementById("donutWrap");
+const barsWrap = document.getElementById("barsWrap");
+const groupBySel = document.getElementById("groupBy");
+const chartToggle = document.getElementById("chartToggle");
+
+const palette = [
+  "#A855F7", "#C084FC", "#D8B4FE", "#F5D0FE", "#FFC7F8", "#B794F4"
+];
+
+function saveStatUI(){ saveJSON(STAT_UI_KEY, statUI); }
+
+function startOfToday(){
+  const d = new Date(); d.setHours(0,0,0,0); return d;
+}
+function startOfMonth(){
+  const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d;
+}
+function inRange(tsISO, range){
+  const d = new Date(tsISO);
+  if(range === "today"){
+    return d >= startOfToday();
+  }
+  if(range === "month"){
+    return d >= startOfMonth();
+  }
+  // week = current monday weekKey
+  return weekKey(d) === weekKey(new Date());
+}
+
+function getStatRows(){
+  const range = statUI.range;
+  const groupBy = statUI.groupBy;
+
+  const filtered = sessions.filter(s => inRange(s.ts, range));
+  const map = new Map(); // key -> minutes, label -> minutes
+
+  for(const s of filtered){
+    const key = (groupBy === "task")
+      ? `${s.project}__${s.taskName}`
+      : s.project;
+
+    const label = (groupBy === "task")
+      ? `${s.taskName} (${s.project})`
+      : s.project;
+
+    map.set(key, (map.get(key) || 0) + s.minutes);
+    map.set(key + "__label", label);
+  }
+
+  const rows = [];
+  for(const [k,v] of map.entries()){
+    if(k.endsWith("__label")) continue;
+    const label = map.get(k + "__label");
+    rows.push({ key:k, label, minutes:v });
+  }
+
+  rows.sort((a,b)=> b.minutes - a.minutes);
+  return rows;
+}
+
+function donutSegment(cx, cy, r, startAngle, endAngle){
+  const toXY = (ang) => {
+    const rad = (Math.PI/180) * ang;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+  const s = toXY(startAngle);
+  const e = toXY(endAngle);
+  const large = (endAngle - startAngle) > 180 ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+}
+
+function renderDonut(rows){
+  donutSvg.innerHTML = "";
+  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
+  donutTotalEl.textContent = String(total);
+
+  // base ring track
+  const track = document.createElementNS("http://www.w3.org/2000/svg","circle");
+  track.setAttribute("cx","60");
+  track.setAttribute("cy","60");
+  track.setAttribute("r","44");
+  track.setAttribute("fill","none");
+  track.setAttribute("stroke","rgba(168,85,247,.14)");
+  track.setAttribute("stroke-width","12");
+  donutSvg.appendChild(track);
+
+  if(total <= 0) return;
+
+  let angle = 0;
+  rows.slice(0, 8).forEach((row, idx) => {
+    const portion = row.minutes / total;
+    const sweep = Math.max(2, portion * 360); // minimum visible slice
+    const start = angle;
+    const end = angle + sweep;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d", donutSegment(60,60,44,start,end));
+    path.setAttribute("fill","none");
+    path.setAttribute("stroke", palette[idx % palette.length]);
+    path.setAttribute("stroke-width","12");
+    path.setAttribute("stroke-linecap","round");
+    path.setAttribute("opacity","0.95");
+
+    // tooltip
+    const title = document.createElementNS("http://www.w3.org/2000/svg","title");
+    const pct = Math.round((portion*100));
+    title.textContent = `${row.label}: ${row.minutes} min (${pct}%)`;
+    path.appendChild(title);
+
+    donutSvg.appendChild(path);
+    angle = end;
+  });
+}
+
+function renderBars(rows){
+  barsWrap.innerHTML = "";
+  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
+  donutTotalEl.textContent = String(total);
+
+  if(total <= 0){
+    barsWrap.innerHTML = `<div class="mini">No minutes logged in this range.</div>`;
+    return;
+  }
+
+  const top = rows.slice(0, 10);
+  const max = Math.max(...top.map(r=>r.minutes));
+
+  top.forEach((row) => {
+    const wrap = document.createElement("div");
+    wrap.className = "bar";
+    wrap.innerHTML = `
+      <div class="barhead">
+        <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${row.label}</span>
+        <span>${row.minutes} min</span>
+      </div>
+      <div class="bartrack"><div class="barfill"></div></div>
+    `;
+    barsWrap.appendChild(wrap);
+    const fill = wrap.querySelector(".barfill");
+    const pct = (row.minutes / max) * 100;
+    requestAnimationFrame(()=> fill.style.width = pct.toFixed(1) + "%");
+  });
+}
+
+function renderLegend(rows){
+  legendEl.innerHTML = "";
+  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
+
+  if(total <= 0){
+    legendEl.innerHTML = `<div class="mini">No minutes logged in this range yet.</div>`;
+    return;
+  }
+
+  rows.slice(0, 8).forEach((row, idx) => {
+    const pct = Math.round((row.minutes / total) * 100);
+    const item = document.createElement("div");
+    item.className = "leg-row";
+    item.innerHTML = `
+      <div class="leg-left">
+        <div class="dot" style="background:${palette[idx % palette.length]};"></div>
+        <span title="${row.label}">${row.label}</span>
+      </div>
+      <div class="leg-right">
+        <b>${row.minutes}</b><small>min</small><small>${pct}%</small>
+      </div>
+    `;
+    legendEl.appendChild(item);
+  });
+}
+
+function renderStats(){
+  if(!donutSvg || !legendEl) return;
+
+  groupBySel.value = statUI.groupBy;
+
+  const rows = getStatRows();
+  renderLegend(rows);
+
+  if(statUI.view === "donut"){
+    chartToggle.textContent = "Circular";
+    donutWrap.style.display = "";
+    barsWrap.style.display = "none";
+    renderDonut(rows);
+  }else{
+    chartToggle.textContent = "Linear";
+    donutWrap.style.display = "none";
+    barsWrap.style.display = "";
+    renderBars(rows);
+  }
+}
+
+function setRange(range){
+  statUI.range = range;
+  saveStatUI();
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.classList.toggle("active", b.dataset.range === range);
+  });
+  renderStats();
+}
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=> setRange(btn.dataset.range));
+});
+
+groupBySel.addEventListener("change", ()=>{
+  statUI.groupBy = groupBySel.value;
+  saveStatUI();
+  renderStats();
+});
+
+chartToggle.addEventListener("click", ()=>{
+  statUI.view = (statUI.view === "donut") ? "bars" : "donut";
+  saveStatUI();
+  renderStats();
+});
+
+/* Hook: whenever sessions change, refresh stats */
+const _origRenderWeeklyLog = renderWeeklyLog;
+renderWeeklyLog = function(){
+  _origRenderWeeklyLog();
+  renderStats();
+};
+
+/* Init stats UI */
+(function initStats(){
+  setRange(statUI.range);
+  groupBySel.value = statUI.groupBy;
+  renderStats();
+})();
 </script>
 
 </body>
