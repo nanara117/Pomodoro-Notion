@@ -6,23 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      /* Light botanical base */
-      --bg:#fbfaf7;                 /* crema clarita */
-      --panel:#ffffff;              /* tarjetas */
+      /* Light base */
+      --bg:#fbfaf7;
+      --panel:#ffffff;
       --text:#2b2b2b;
       --muted:#6f6f78;
 
-      /* Purple accents (ring + background design) */
+      /* Purple accents */
       --accent:#a855f7;
       --accent2:#7c3aed;
 
-      /* Ring track + glow */
-      --ringTrack: rgba(60, 36, 92, .10);
-      --glow: rgba(168,85,247,.12);
+      /* Ring */
+      --ringTrack: rgba(60, 36, 92, .12);
+      --glow: rgba(168,85,247,.14);
 
-      /* Daisy cream */
-      --daisy:#FFC7F8;
---daisyCenter:#FFD84D;
+      /* Daisy */
+      --daisy:#FFC7F8;         /* petals */
+      --daisyCenter:#6D28D9;   /* darker purple center */
 
       /* Congrats tint */
       --good: rgba(34,197,94,.12);
@@ -31,20 +31,39 @@
 
     *{box-sizing:border-box}
 
+    html, body { overflow: hidden; }
+
     body{
       margin:0;
       background:
-  radial-gradient(1000px 600px at 18% 18%, rgba(168,85,247,.30), transparent 55%),
-  radial-gradient(900px 620px at 82% 28%, rgba(124,58,237,.24), transparent 62%),
-  radial-gradient(1100px 700px at 52% 92%, rgba(168,85,247,.20), transparent 60%),
-  linear-gradient(180deg, rgba(168,85,247,.08), transparent 45%),
-  var(--bg);
+        radial-gradient(1100px 700px at 18% 18%, rgba(168,85,247,.34), transparent 56%),
+        radial-gradient(1000px 720px at 82% 26%, rgba(124,58,237,.26), transparent 62%),
+        radial-gradient(1200px 820px at 55% 92%, rgba(168,85,247,.22), transparent 62%),
+        linear-gradient(180deg, rgba(168,85,247,.10), transparent 45%),
+        var(--bg);
       color:var(--text);
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       display:grid;
       place-items:center;
       height:100vh;
       overflow:hidden;
+    }
+
+    /* ===== Layers ===== */
+    .daisy-layer{
+      position: fixed;
+      inset: -180px;      /* IMPORTANT: prevents edge clipping */
+      pointer-events:none;
+      z-index:0;
+      overflow: visible;
+    }
+
+    .petal-layer{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2; /* above daisies, below app */
+      overflow: hidden;
     }
 
     .app{
@@ -55,9 +74,10 @@
       padding:24px;
       width:min(920px, 100%);
       position:relative;
-      z-index:2;
+      z-index:3;
     }
 
+    /* ===== Top UI ===== */
     .topline{
       display:flex;
       align-items:center;
@@ -73,12 +93,12 @@
       gap:10px;
       padding:10px 14px;
       border-radius:14px;
-      background:rgba(255,255,255,.82);
+      background:rgba(255,255,255,.86);
       border:1px solid rgba(40, 30, 60, .10);
       backdrop-filter: blur(10px);
       color:var(--muted);
       font-size:13px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,.06);
     }
 
     .badge{
@@ -99,15 +119,16 @@
       width:70px;
       padding:8px 10px;
       border-radius:12px;
-      background:rgba(255,255,255,.9);
+      background:rgba(255,255,255,.92);
       border:1px solid rgba(40, 30, 60, .12);
       color:var(--text);
       outline:none;
       font-size:13px;
       text-align:center;
-      box-shadow: 0 10px 28px rgba(0,0,0,.04);
+      box-shadow: 0 10px 28px rgba(0,0,0,.05);
     }
 
+    /* ===== Ring ===== */
     .ring{
       width:360px;
       height:360px;
@@ -124,7 +145,7 @@
       width:300px;
       height:300px;
       border-radius:50%;
-      background:rgba(255,255,255,.92);
+      background:rgba(255,255,255,.94);
       border:1px solid rgba(40, 30, 60, .10);
       display:flex;
       flex-direction:column;
@@ -138,9 +159,10 @@
 
     .time{
       font-size:74px;
-      font-weight:750;
+      font-weight:780;
       letter-spacing:.5px;
       line-height:1;
+      color:#2a2a2a;
     }
 
     .sub{
@@ -149,6 +171,7 @@
       font-size:14px;
     }
 
+    /* ===== Controls ===== */
     .controls{
       display:flex;
       gap:12px;
@@ -157,7 +180,7 @@
     }
 
     button{
-      background:rgba(255,255,255,.86);
+      background:rgba(255,255,255,.90);
       border:1px solid rgba(40, 30, 60, .12);
       color:var(--text);
       padding:10px 16px;
@@ -187,7 +210,7 @@
       text-align:center;
     }
 
-    /* Toast */
+    /* ===== Toast ===== */
     .toast{
       position:fixed;
       top:18px;
@@ -195,7 +218,7 @@
       transform:translateX(-50%);
       padding:12px 14px;
       border-radius:14px;
-      background:rgba(255,255,255,.88);
+      background:rgba(255,255,255,.90);
       border:1px solid rgba(40, 30, 60, .12);
       color:var(--text);
       backdrop-filter: blur(10px);
@@ -215,106 +238,88 @@
     }
     .toast.good{
       border-color: var(--goodBorder);
-      background: linear-gradient(0deg, var(--good), rgba(255,255,255,.88));
+      background: linear-gradient(0deg, var(--good), rgba(255,255,255,.90));
     }
-
     .toast .dot{
       width:10px;height:10px;border-radius:50%;
       background:rgba(34,197,94,.9);
       box-shadow:0 0 0 6px rgba(34,197,94,.15);
     }
 
-    /* Daisy layer */
-    .daisy-layer{
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      z-index:0;
+    /* ===== Daisy SVGs (icon style) ===== */
+    .daisy{
+      position:absolute;
+      width:360px;
+      height:360px;
+      opacity:.80;
+      transform-origin: 50% 50%;
+      filter: drop-shadow(0 24px 44px rgba(168,85,247,.20));
+    }
+    .daisy g{ fill: var(--daisy); }
+    .daisy .center{ fill: var(--daisyCenter); }
+
+    /* positions (big + visible) */
+    .d1{ top: 10px; left: 10px; transform: rotate(-10deg); }
+    .d2{ bottom: -10px; right: -10px; transform: rotate(16deg); width: 420px; height: 420px; opacity:.74; }
+    .d3{ top: 120px; right: 30px; transform: rotate(6deg); width: 260px; height: 260px; opacity:.55; }
+    .d4{ bottom: 120px; left: 40px; transform: rotate(-6deg); width: 280px; height: 280px; opacity:.50; }
+
+    @keyframes daisyFloat {
+      0%   { transform: translateY(0) rotate(var(--r)); }
+      50%  { transform: translateY(-14px) rotate(calc(var(--r) + 4deg)); }
+      100% { transform: translateY(0) rotate(var(--r)); }
+    }
+    @keyframes daisyPulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.04); }
+      100% { transform: scale(1); }
     }
 
-    .daisy{
-  position:absolute;
-  width:320px;
-  height:320px;
-  opacity:.85;
-  fill: var(--daisy);
-  filter: drop-shadow(0 20px 40px rgba(168,85,247,.18));
-  transform-origin: 50% 50%;
-}
+    body.running .d1{ --r:-10deg; animation: daisyFloat 4.2s ease-in-out infinite; }
+    body.running .d2{ --r:16deg;  animation: daisyFloat 5.1s ease-in-out infinite; }
+    body.running .d3{ --r:6deg;   animation: daisyFloat 4.6s ease-in-out infinite; }
+    body.running .d4{ --r:-6deg;  animation: daisyFloat 5.4s ease-in-out infinite; }
 
-.daisy .center{
-  fill: var(--daisyCenter);
-}
+    body.running .daisy{
+      /* add subtle pulse while running */
+      animation-name: daisyFloat, daisyPulse;
+      animation-duration: 5s, 2.4s;
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+    }
 
-/* posiciones grandes y visibles */
-.d1{ top:-90px; left:-90px; transform: rotate(-12deg); }
-.d2{ bottom:-120px; right:-120px; transform: rotate(18deg); width:380px; height:380px; opacity:.75; }
-.d3{ top:40px; right:-140px; transform: rotate(6deg); width:260px; height:260px; opacity:.6; }
+    /* ===== Falling petals burst ===== */
+    .petal{
+      position: absolute;
+      top: -50px;
+      width: 20px;
+      height: 14px;
+      background: var(--daisy);
+      border-radius: 999px;
+      opacity: .95;
+      filter: drop-shadow(0 12px 22px rgba(168,85,247,.18));
+      animation: fall var(--dur) linear forwards, sway var(--sway) ease-in-out infinite;
+      will-change: transform, opacity;
+    }
+    .petal::after{
+      content:"";
+      position:absolute;
+      inset: 2px;
+      background: rgba(255,255,255,.25);
+      border-radius: 999px;
+    }
 
-    /* Animations ONLY when running */
-  @keyframes daisyFloat {
-  0%   { transform: translateY(0) rotate(var(--r)); }
-  50%  { transform: translateY(-14px) rotate(calc(var(--r) + 4deg)); }
-  100% { transform: translateY(0) rotate(var(--r)); }
-}
+    @keyframes fall{
+      to{
+        transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
+        opacity: 0;
+      }
+    }
+    @keyframes sway{
+      0%,100%{ margin-left: 0; }
+      50%{ margin-left: 14px; }
+    }
 
-@keyframes daisyPulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-
-body.running .d1{ --r:-12deg; animation: daisyFloat 4.2s ease-in-out infinite; }
-body.running .d2{ --r:18deg;  animation: daisyFloat 5.1s ease-in-out infinite; }
-body.running .d3{ --r:6deg;   animation: daisyFloat 4.6s ease-in-out infinite; }
-
-body.running .daisy{
-  animation-name: daisyFloat, daisyPulse;
-  animation-duration: 5s, 2.4s;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in-out;
-}
-
-    .petal-layer{
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1; /* debajo de .app (que está en 2) */
-  overflow: hidden;
-}
-
-.petal{
-  position: absolute;
-  top: -40px;
-  width: 18px;
-  height: 12px;
-  background: #FFC7F8;
-  border-radius: 999px 999px 999px 999px;
-  opacity: .9;
-  filter: drop-shadow(0 10px 18px rgba(168,85,247,.18));
-  transform: rotate(0deg);
-  animation: fall var(--dur) linear forwards, sway var(--sway) ease-in-out infinite;
-}
-
-.petal::after{
-  content:"";
-  position:absolute;
-  inset: 2px 2px 2px 2px;
-  background: rgba(255,255,255,.25);
-  border-radius: 999px;
-}
-
-@keyframes fall{
-  to{
-    transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
-    opacity: 0;
-  }
-}
-
-@keyframes sway{
-  0%,100%{ margin-left: 0; }
-  50%{ margin-left: 14px; }
-}
     @media (max-width: 460px){
       .ring{ width:320px; height:320px; }
       .inner{ width:270px; height:270px; }
@@ -324,52 +329,64 @@ body.running .daisy{
 </head>
 
 <body>
+  <!-- Daisy layer -->
+  <div class="daisy-layer" aria-hidden="true">
+    <!-- Daisy SVG: icon-like 5 petals + center -->
+    <svg class="daisy d1" viewBox="0 0 120 120">
+      <g>
+        <ellipse cx="60" cy="22" rx="22" ry="32"/>
+        <ellipse cx="98" cy="60" rx="32" ry="22"/>
+        <ellipse cx="60" cy="98" rx="22" ry="32"/>
+        <ellipse cx="22" cy="60" rx="32" ry="22"/>
+        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+        <circle cx="60" cy="60" r="20" class="center"/>
+      </g>
+    </svg>
 
-<div class="petal-layer" aria-hidden="true" id="petalLayer"></div>
- <!-- Daisy layer -->
-<div class="daisy-layer" aria-hidden="true">
+    <svg class="daisy d2" viewBox="0 0 120 120">
+      <g>
+        <ellipse cx="60" cy="22" rx="22" ry="32"/>
+        <ellipse cx="98" cy="60" rx="32" ry="22"/>
+        <ellipse cx="60" cy="98" rx="22" ry="32"/>
+        <ellipse cx="22" cy="60" rx="32" ry="22"/>
+        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+        <circle cx="60" cy="60" r="18" class="center"/>
+      </g>
+    </svg>
 
-  <svg class="daisy d1" viewBox="0 0 120 120">
-    <g>
-      <ellipse cx="60" cy="22" rx="22" ry="32"/>
-      <ellipse cx="98" cy="60" rx="32" ry="22"/>
-      <ellipse cx="60" cy="98" rx="22" ry="32"/>
-      <ellipse cx="22" cy="60" rx="32" ry="22"/>
-      <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-      <circle cx="60" cy="60" r="20" class="center"/>
-    </g>
-  </svg>
+    <svg class="daisy d3" viewBox="0 0 120 120">
+      <g>
+        <ellipse cx="60" cy="22" rx="22" ry="32"/>
+        <ellipse cx="98" cy="60" rx="32" ry="22"/>
+        <ellipse cx="60" cy="98" rx="22" ry="32"/>
+        <ellipse cx="22" cy="60" rx="32" ry="22"/>
+        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+        <circle cx="60" cy="60" r="16" class="center"/>
+      </g>
+    </svg>
 
-  <svg class="daisy d2" viewBox="0 0 120 120">
-    <g>
-      <ellipse cx="60" cy="22" rx="22" ry="32"/>
-      <ellipse cx="98" cy="60" rx="32" ry="22"/>
-      <ellipse cx="60" cy="98" rx="22" ry="32"/>
-      <ellipse cx="22" cy="60" rx="32" ry="22"/>
-      <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-      <circle cx="60" cy="60" r="18" class="center"/>
-    </g>
-  </svg>
+    <svg class="daisy d4" viewBox="0 0 120 120">
+      <g>
+        <ellipse cx="60" cy="22" rx="22" ry="32"/>
+        <ellipse cx="98" cy="60" rx="32" ry="22"/>
+        <ellipse cx="60" cy="98" rx="22" ry="32"/>
+        <ellipse cx="22" cy="60" rx="32" ry="22"/>
+        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+        <circle cx="60" cy="60" r="16" class="center"/>
+      </g>
+    </svg>
+  </div>
 
-  <svg class="daisy d3" viewBox="0 0 120 120">
-    <g>
-      <ellipse cx="60" cy="22" rx="22" ry="32"/>
-      <ellipse cx="98" cy="60" rx="32" ry="22"/>
-      <ellipse cx="60" cy="98" rx="22" ry="32"/>
-      <ellipse cx="22" cy="60" rx="32" ry="22"/>
-      <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-      <circle cx="60" cy="60" r="16" class="center"/>
-    </g>
-  </svg>
+  <!-- Petals layer -->
+  <div class="petal-layer" aria-hidden="true" id="petalLayer"></div>
 
-</div>
-
-
+  <!-- Congrats toast -->
   <div class="toast" id="toast">
     <span class="dot"></span>
     <span id="toastText">Congrats!</span>
   </div>
 
+  <!-- App -->
   <div class="app">
     <div class="topline">
       <div class="pill">
@@ -417,7 +434,7 @@ body.running .daisy{
 
     // Goal persistence (simple): localStorage
     const GOAL_KEY = "pomo_daily_goal";
-    const GOAL_CONGRATS_KEY = "pomo_goal_congrats_shown"; // per session until Reset
+    const GOAL_CONGRATS_KEY = "pomo_goal_congrats_shown"; // until Reset
 
     // === State ===
     let mode = "focus"; // "focus" | "break"
@@ -478,6 +495,41 @@ body.running .daisy{
       }
     }
 
+    // Petals burst on play
+    function launchPetalsBurst(count = 22){
+      const petalLayer = document.getElementById("petalLayer");
+      if(!petalLayer) return;
+
+      for(let i=0; i<count; i++){
+        const p = document.createElement("div");
+        p.className = "petal";
+
+        // random start position
+        const x = Math.random() * window.innerWidth;
+        p.style.left = `${x}px`;
+
+        // random drift and rotation
+        const dx = (Math.random() * 160 - 80);     // -80..80
+        const rot = (Math.random() * 720 - 360);   // -360..360
+
+        // random duration/sway
+        const dur = (Math.random() * 1.8 + 2.8).toFixed(2) + "s";  // 2.8–4.6s
+        const sway = (Math.random() * 1.0 + 0.9).toFixed(2) + "s"; // 0.9–1.9s
+
+        // random size
+        const scale = (Math.random() * 0.9 + 0.7).toFixed(2); // 0.7–1.6
+
+        p.style.setProperty("--dx", `${dx}px`);
+        p.style.setProperty("--rot", `${rot}deg`);
+        p.style.setProperty("--dur", dur);
+        p.style.setProperty("--sway", sway);
+        p.style.transform = `scale(${scale})`;
+
+        petalLayer.appendChild(p);
+        setTimeout(() => p.remove(), 5200);
+      }
+    }
+
     function setMode(newMode){
       mode = newMode;
 
@@ -516,43 +568,8 @@ body.running .daisy{
       if(timer) return;
 
       setRunning(true);
+      launchPetalsBurst(26);
 
-      const petalLayer = document.getElementById("petalLayer");
-
-function launchPetalsBurst(count = 18){
-  if(!petalLayer) return;
-
-  for(let i=0; i<count; i++){
-    const p = document.createElement("div");
-    p.className = "petal";
-
-    // random start position
-    const x = Math.random() * window.innerWidth;
-    p.style.left = `${x}px`;
-
-    // random drift and rotation
-    const dx = (Math.random() * 120 - 60); // -60..60
-    const rot = (Math.random() * 540 - 270); // -270..270
-
-    // random duration/sway
-    const dur = (Math.random() * 1.6 + 2.6).toFixed(2) + "s";   // 2.6–4.2s
-    const sway = (Math.random() * 0.9 + 0.9).toFixed(2) + "s";  // 0.9–1.8s
-
-    // random size
-    const scale = (Math.random() * 0.7 + 0.65).toFixed(2); // 0.65–1.35
-    p.style.transform = `scale(${scale})`;
-
-    p.style.setProperty("--dx", `${dx}px`);
-    p.style.setProperty("--rot", `${rot}deg`);
-    p.style.setProperty("--dur", dur);
-    p.style.setProperty("--sway", sway);
-
-    petalLayer.appendChild(p);
-
-    // cleanup
-    setTimeout(() => p.remove(), 5200);
-  }
-}
       // delta-time so it doesn't drift
       lastTick = Date.now();
       timer = setInterval(() => {
@@ -614,7 +631,7 @@ function launchPetalsBurst(count = 18){
       stopTimer();
       pomoCount = 0;
       localStorage.removeItem(GOAL_CONGRATS_KEY);
-      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.12) inset";
+      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.14) inset";
       setMode("focus");
     };
 
@@ -629,7 +646,7 @@ function launchPetalsBurst(count = 18){
       goalInput.value = g;
       localStorage.setItem(GOAL_KEY, String(g));
       localStorage.removeItem(GOAL_CONGRATS_KEY);
-      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.12) inset";
+      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.14) inset";
       render();
     });
 
