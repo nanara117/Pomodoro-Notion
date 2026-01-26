@@ -21,8 +21,8 @@
       --glow: rgba(168,85,247,.12);
 
       /* Daisy cream */
-      --daisy:#FFFAD6;
-      --daisy2:#F6C7FF;
+      --daisy:#FFC7F8;
+--daisyCenter:#FFD84D;
 
       /* Congrats tint */
       --good: rgba(34,197,94,.12);
@@ -234,51 +234,87 @@
 
     .daisy{
   position:absolute;
-  width:280px;
-  height:280px;
-  opacity:.78;
+  width:320px;
+  height:320px;
+  opacity:.85;
+  fill: var(--daisy);
+  filter: drop-shadow(0 20px 40px rgba(168,85,247,.18));
   transform-origin: 50% 50%;
-  filter: drop-shadow(0 18px 34px rgba(124,58,237,.10));
 }
-    .daisy .petals ellipse{
-      fill: var(--daisy);
-      stroke: rgba(120, 90, 160, .09);
-      stroke-width: 1.5;
-    }
 
-    .daisy .center{
-      fill: var(--daisy2);
-      opacity:.85;
-    }
+.daisy .center{
+  fill: var(--daisyCenter);
+}
 
-    /* positions */
-.d1{ top:-70px; left:-70px; transform: rotate(-12deg); width:340px; height:340px; }
-.d2{ bottom:-90px; right:-90px; transform: rotate(18deg); width:380px; height:380px; opacity:.65; }
-.d3{ top:10px; right:-110px; transform: rotate(8deg); width:260px; height:260px; opacity:.55; }
-.d4{ bottom:0px; left:-120px; transform: rotate(-6deg); width:280px; height:280px; opacity:.52; }
+/* posiciones grandes y visibles */
+.d1{ top:-90px; left:-90px; transform: rotate(-12deg); }
+.d2{ bottom:-120px; right:-120px; transform: rotate(18deg); width:380px; height:380px; opacity:.75; }
+.d3{ top:40px; right:-140px; transform: rotate(6deg); width:260px; height:260px; opacity:.6; }
 
     /* Animations ONLY when running */
-    @keyframes floaty {
-      0%   { transform: translate(0,0) rotate(var(--r)); }
-      50%  { transform: translate(0,-10px) rotate(calc(var(--r) + 3deg)); }
-      100% { transform: translate(0,0) rotate(var(--r)); }
-    }
+  @keyframes daisyFloat {
+  0%   { transform: translateY(0) rotate(var(--r)); }
+  50%  { transform: translateY(-14px) rotate(calc(var(--r) + 4deg)); }
+  100% { transform: translateY(0) rotate(var(--r)); }
+}
 
-    @keyframes petalWiggle {
-      0%   { transform: scale(1); }
-      50%  { transform: scale(1.03); }
-      100% { transform: scale(1); }
-    }
+@keyframes daisyPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
 
-    body.running .d1{ --r:-12deg; animation: floaty 3.6s ease-in-out infinite; }
-    body.running .d2{ --r:18deg;  animation: floaty 4.4s ease-in-out infinite; }
-    body.running .d3{ --r:8deg;   animation: floaty 3.9s ease-in-out infinite; }
-    body.running .d4{ --r:-6deg;  animation: floaty 4.7s ease-in-out infinite; }
+body.running .d1{ --r:-12deg; animation: daisyFloat 4.2s ease-in-out infinite; }
+body.running .d2{ --r:18deg;  animation: daisyFloat 5.1s ease-in-out infinite; }
+body.running .d3{ --r:6deg;   animation: daisyFloat 4.6s ease-in-out infinite; }
 
-    body.running .daisy .petals{
-      animation: petalWiggle 1.8s ease-in-out infinite;
-    }
+body.running .daisy{
+  animation-name: daisyFloat, daisyPulse;
+  animation-duration: 5s, 2.4s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
 
+    .petal-layer{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1; /* debajo de .app (que está en 2) */
+  overflow: hidden;
+}
+
+.petal{
+  position: absolute;
+  top: -40px;
+  width: 18px;
+  height: 12px;
+  background: #FFC7F8;
+  border-radius: 999px 999px 999px 999px;
+  opacity: .9;
+  filter: drop-shadow(0 10px 18px rgba(168,85,247,.18));
+  transform: rotate(0deg);
+  animation: fall var(--dur) linear forwards, sway var(--sway) ease-in-out infinite;
+}
+
+.petal::after{
+  content:"";
+  position:absolute;
+  inset: 2px 2px 2px 2px;
+  background: rgba(255,255,255,.25);
+  border-radius: 999px;
+}
+
+@keyframes fall{
+  to{
+    transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+@keyframes sway{
+  0%,100%{ margin-left: 0; }
+  50%{ margin-left: 14px; }
+}
     @media (max-width: 460px){
       .ring{ width:320px; height:320px; }
       .inner{ width:270px; height:270px; }
@@ -288,72 +324,46 @@
 </head>
 
 <body>
-  <!-- Daisy layer -->
-  <div class="daisy-layer" aria-hidden="true">
-    <svg class="daisy d1" viewBox="0 0 120 120">
-      <g>
-        <circle cx="60" cy="60" r="16" class="center"/>
-        <g class="petals">
-          <ellipse cx="60" cy="18" rx="10" ry="18"/>
-          <ellipse cx="60" cy="102" rx="10" ry="18"/>
-          <ellipse cx="18" cy="60" rx="18" ry="10"/>
-          <ellipse cx="102" cy="60" rx="18" ry="10"/>
-          <ellipse cx="32" cy="32" rx="12" ry="18" transform="rotate(-45 32 32)"/>
-          <ellipse cx="88" cy="32" rx="12" ry="18" transform="rotate(45 88 32)"/>
-          <ellipse cx="32" cy="88" rx="12" ry="18" transform="rotate(45 32 88)"/>
-          <ellipse cx="88" cy="88" rx="12" ry="18" transform="rotate(-45 88 88)"/>
-        </g>
-      </g>
-    </svg>
 
-    <svg class="daisy d2" viewBox="0 0 120 120">
-      <g>
-        <circle cx="60" cy="60" r="14" class="center"/>
-        <g class="petals">
-          <ellipse cx="60" cy="18" rx="9" ry="16"/>
-          <ellipse cx="60" cy="102" rx="9" ry="16"/>
-          <ellipse cx="18" cy="60" rx="16" ry="9"/>
-          <ellipse cx="102" cy="60" rx="16" ry="9"/>
-          <ellipse cx="34" cy="34" rx="11" ry="16" transform="rotate(-45 34 34)"/>
-          <ellipse cx="86" cy="34" rx="11" ry="16" transform="rotate(45 86 34)"/>
-          <ellipse cx="34" cy="86" rx="11" ry="16" transform="rotate(45 34 86)"/>
-          <ellipse cx="86" cy="86" rx="11" ry="16" transform="rotate(-45 86 86)"/>
-        </g>
-      </g>
-    </svg>
+<div class="petal-layer" aria-hidden="true" id="petalLayer"></div>
+ <!-- Daisy layer -->
+<div class="daisy-layer" aria-hidden="true">
 
-    <svg class="daisy d3" viewBox="0 0 120 120">
-      <g>
-        <circle cx="60" cy="60" r="13" class="center"/>
-        <g class="petals">
-          <ellipse cx="60" cy="18" rx="8" ry="15"/>
-          <ellipse cx="60" cy="102" rx="8" ry="15"/>
-          <ellipse cx="18" cy="60" rx="15" ry="8"/>
-          <ellipse cx="102" cy="60" rx="15" ry="8"/>
-          <ellipse cx="34" cy="34" rx="10" ry="15" transform="rotate(-45 34 34)"/>
-          <ellipse cx="86" cy="34" rx="10" ry="15" transform="rotate(45 86 34)"/>
-          <ellipse cx="34" cy="86" rx="10" ry="15" transform="rotate(45 34 86)"/>
-          <ellipse cx="86" cy="86" rx="10" ry="15" transform="rotate(-45 86 86)"/>
-        </g>
-      </g>
-    </svg>
+  <svg class="daisy d1" viewBox="0 0 120 120">
+    <g>
+      <ellipse cx="60" cy="22" rx="22" ry="32"/>
+      <ellipse cx="98" cy="60" rx="32" ry="22"/>
+      <ellipse cx="60" cy="98" rx="22" ry="32"/>
+      <ellipse cx="22" cy="60" rx="32" ry="22"/>
+      <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+      <circle cx="60" cy="60" r="20" class="center"/>
+    </g>
+  </svg>
 
-    <svg class="daisy d4" viewBox="0 0 120 120">
-      <g>
-        <circle cx="60" cy="60" r="13" class="center"/>
-        <g class="petals">
-          <ellipse cx="60" cy="18" rx="8" ry="15"/>
-          <ellipse cx="60" cy="102" rx="8" ry="15"/>
-          <ellipse cx="18" cy="60" rx="15" ry="8"/>
-          <ellipse cx="102" cy="60" rx="15" ry="8"/>
-          <ellipse cx="34" cy="34" rx="10" ry="15" transform="rotate(-45 34 34)"/>
-          <ellipse cx="86" cy="34" rx="10" ry="15" transform="rotate(45 86 34)"/>
-          <ellipse cx="34" cy="86" rx="10" ry="15" transform="rotate(45 34 86)"/>
-          <ellipse cx="86" cy="86" rx="10" ry="15" transform="rotate(-45 86 86)"/>
-        </g>
-      </g>
-    </svg>
-  </div>
+  <svg class="daisy d2" viewBox="0 0 120 120">
+    <g>
+      <ellipse cx="60" cy="22" rx="22" ry="32"/>
+      <ellipse cx="98" cy="60" rx="32" ry="22"/>
+      <ellipse cx="60" cy="98" rx="22" ry="32"/>
+      <ellipse cx="22" cy="60" rx="32" ry="22"/>
+      <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+      <circle cx="60" cy="60" r="18" class="center"/>
+    </g>
+  </svg>
+
+  <svg class="daisy d3" viewBox="0 0 120 120">
+    <g>
+      <ellipse cx="60" cy="22" rx="22" ry="32"/>
+      <ellipse cx="98" cy="60" rx="32" ry="22"/>
+      <ellipse cx="60" cy="98" rx="22" ry="32"/>
+      <ellipse cx="22" cy="60" rx="32" ry="22"/>
+      <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
+      <circle cx="60" cy="60" r="16" class="center"/>
+    </g>
+  </svg>
+
+</div>
+
 
   <div class="toast" id="toast">
     <span class="dot"></span>
@@ -507,6 +517,42 @@
 
       setRunning(true);
 
+      const petalLayer = document.getElementById("petalLayer");
+
+function launchPetalsBurst(count = 18){
+  if(!petalLayer) return;
+
+  for(let i=0; i<count; i++){
+    const p = document.createElement("div");
+    p.className = "petal";
+
+    // random start position
+    const x = Math.random() * window.innerWidth;
+    p.style.left = `${x}px`;
+
+    // random drift and rotation
+    const dx = (Math.random() * 120 - 60); // -60..60
+    const rot = (Math.random() * 540 - 270); // -270..270
+
+    // random duration/sway
+    const dur = (Math.random() * 1.6 + 2.6).toFixed(2) + "s";   // 2.6–4.2s
+    const sway = (Math.random() * 0.9 + 0.9).toFixed(2) + "s";  // 0.9–1.8s
+
+    // random size
+    const scale = (Math.random() * 0.7 + 0.65).toFixed(2); // 0.65–1.35
+    p.style.transform = `scale(${scale})`;
+
+    p.style.setProperty("--dx", `${dx}px`);
+    p.style.setProperty("--rot", `${rot}deg`);
+    p.style.setProperty("--dur", dur);
+    p.style.setProperty("--sway", sway);
+
+    petalLayer.appendChild(p);
+
+    // cleanup
+    setTimeout(() => p.remove(), 5200);
+  }
+}
       // delta-time so it doesn't drift
       lastTick = Date.now();
       timer = setInterval(() => {
