@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Notion Pomodoro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
 <style>
 :root{
   --bg:#FBF8FF;
@@ -6,109 +13,274 @@
   --accent2:#C084FC;
   --ringTrack:rgba(168,85,247,.18);
 
+  --petal:#FFC7F8;
+
   --panelBg: rgba(255,255,255,.86);
   --panelBorder: rgba(168,85,247,.16);
-
-  --text:#1f1f1f;
-  --muted:rgba(0,0,0,.55);
+  --text: #1f1f1f;
+  --muted: rgba(0,0,0,.55);
 }
 
-/* ===== Reset ===== */
-*{ box-sizing:border-box; }
+*{box-sizing:border-box}
 
 html,body{
   margin:0;
   height:100%;
+  overflow:hidden;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color:var(--text);
+  color: var(--text);
 }
 
-/* ===== Background ===== */
 body{
   background:
     radial-gradient(900px 560px at 20% 22%, rgba(168,85,247,.30), transparent 62%),
     radial-gradient(980px 640px at 80% 30%, rgba(192,132,252,.26), transparent 66%),
     linear-gradient(180deg, rgba(168,85,247,.10), transparent 52%),
     var(--bg);
+}
+
+/* ===== Petals layer ===== */
+.petal-layer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
   overflow:hidden;
 }
+.petal{
+  position:absolute;
+  top:-70px;
+  width:34px;
+  height:22px;
+  background:var(--petal);
+  border-radius:999px;
+  opacity:.95;
+  filter: drop-shadow(0 14px 26px rgba(168,85,247,.30));
+  animation:
+    fall var(--dur) linear forwards,
+    sway var(--sway) ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.petal::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  background:rgba(255,255,255,.28);
+  border-radius:999px;
+}
+@keyframes fall{
+  to{
+    transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
+    opacity:0;
+  }
+}
+@keyframes sway{
+  0%,100%{ margin-left: 0; }
+  50%{ margin-left: 18px; }
+}
 
-/* ===== Layout shell ===== */
+/* ===== Layout ===== */
 .shell{
+  position:relative;
+  z-index:2;
   height:100%;
   display:grid;
-  grid-template-columns: 320px 1fr 300px;
+  grid-template-columns: 320px 1fr;
 }
 
-/* ===== Left Sidebar ===== */
 .sidebar{
+  height:100%;
   padding:14px;
-  border-right:1px solid var(--panelBorder);
-  background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
+  border-right: 1px solid var(--panelBorder);
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
   backdrop-filter: blur(10px);
   overflow:auto;
 }
 
-/* ===== Main ===== */
+.shell.collapsed{
+  grid-template-columns: 68px 1fr;
+}
+.shell.collapsed .sidebar-inner{
+  display:none;
+}
+.shell.collapsed .sidebar{
+  padding:14px 10px;
+}
+
 .main{
+  height:100%;
   overflow:auto;
-  padding:20px;
   display:grid;
   place-items:center;
+  padding:18px;
 }
 
-/* ===== Right Stats ===== */
-.stats{
-  padding:16px;
-  border-left:1px solid var(--panelBorder);
-  background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.55));
-  backdrop-filter: blur(10px);
-  overflow:auto;
-}
-
-/* ===== Panels ===== */
+/* ===== Panels / Pills ===== */
 .panel{
-  background:var(--panelBg);
-  border:1px solid var(--panelBorder);
+  background: var(--panelBg);
+  border: 1px solid var(--panelBorder);
   border-radius:18px;
   box-shadow:0 12px 34px rgba(0,0,0,.08);
+  backdrop-filter: blur(10px);
 }
 
-/* ===== Pills ===== */
 .pill{
-  background:rgba(255,255,255,.92);
+  background:rgba(255,255,255,.90);
   border:1px solid rgba(168,85,247,.16);
   border-radius:14px;
   padding:10px 14px;
   font-size:13px;
-  font-weight:700;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
   display:flex;
   align-items:center;
   gap:8px;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
 }
 
 .pill input{
   width:64px;
   border:none;
   outline:none;
-  background:rgba(168,85,247,.12);
+  background:rgba(168,85,247,.10);
   border-radius:10px;
   padding:6px 8px;
   text-align:center;
-  font-weight:800;
+  font-weight:700;
+  color:#2b2b2b;
+}
+.pill input.small{ width:54px; }
+.pill input:disabled{ opacity:.55; cursor:not-allowed; }
+
+/* ===== Sidebar UI ===== */
+.sb-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
 }
 
-/* ===== App container ===== */
-.app{
-  width:min(960px,100%);
+.sb-title{
+  font-weight:900;
+  font-size:14px;
+  letter-spacing:.2px;
+}
+
+.iconbtn{
+  width:38px; height:38px;
+  border-radius:12px;
+  border:1px solid var(--panelBorder);
+  background: rgba(255,255,255,.85);
+  box-shadow:0 10px 26px rgba(0,0,0,.08);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+}
+
+.project{
+  border:1px solid rgba(168,85,247,.14);
+  background: rgba(255,255,255,.72);
+  border-radius:16px;
+  padding:10px;
+  margin-bottom:10px;
+}
+
+.project-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.project-name{
+  font-weight:900;
+  font-size:13px;
+}
+.project-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.plusbtn{
+  width:30px; height:30px;
+  border-radius:10px;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(168,85,247,.10);
+  cursor:pointer;
+  font-weight:900;
+  display:grid;
+  place-items:center;
+}
+
+.tasklist{
+  margin-top:8px;
   display:flex;
   flex-direction:column;
-  gap:14px;
-  align-items:center;
+  gap:6px;
 }
 
-/* ===== Top rows ===== */
+.task{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(168,85,247,.12);
+  background: rgba(255,255,255,.85);
+  cursor:pointer;
+  font-size:13px;
+}
+
+.task small{
+  color: var(--muted);
+  font-weight:600;
+}
+
+.task.active{
+  border-color: rgba(168,85,247,.55);
+  box-shadow:0 10px 22px rgba(168,85,247,.10);
+  background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(192,132,252,.12));
+}
+
+.addrow{
+  display:none;
+  margin-top:8px;
+  gap:8px;
+}
+.addrow.show{ display:flex; }
+
+.addrow input{
+  flex:1;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(255,255,255,.90);
+  border-radius:12px;
+  padding:10px 10px;
+  outline:none;
+  font-weight:650;
+}
+
+.addrow button{
+  border:none;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:800;
+  background: linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+  box-shadow:0 12px 26px rgba(168,85,247,.18);
+}
+
+/* ===== Main app ===== */
+.app{
+  width:min(980px, 100%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+
 .top{
   display:flex;
   gap:10px;
@@ -116,16 +288,12 @@ body{
   justify-content:center;
 }
 
-/* ===== Ring ===== */
 .ring{
   width:320px;
   height:320px;
   border-radius:50%;
   background:
-    conic-gradient(
-      var(--accent) calc(var(--progress)*1turn),
-      var(--ringTrack) 0
-    );
+    conic-gradient(var(--accent) calc(var(--progress)*1turn), var(--ringTrack) 0);
   display:grid;
   place-items:center;
 }
@@ -140,21 +308,23 @@ body{
   align-items:center;
   justify-content:center;
   box-shadow:0 20px 50px rgba(0,0,0,.10);
+  text-align:center;
+  padding:14px;
 }
 
-/* ===== Timer text ===== */
 .time{
   font-size:64px;
   font-weight:900;
+  letter-spacing:.5px;
+  line-height:1;
 }
 
 .sub{
   font-size:13px;
-  opacity:.6;
-  margin-top:8px;
+  opacity:.60;
+  margin-top:10px;
 }
 
-/* ===== Controls ===== */
 .controls{
   display:flex;
   gap:10px;
@@ -167,133 +337,299 @@ button{
   border-radius:14px;
   border:none;
   cursor:pointer;
-  font-weight:800;
   background:white;
   box-shadow:0 10px 30px rgba(0,0,0,.10);
+  font-weight:800;
 }
-
-button.primary{
+button:disabled{ opacity:.55; cursor:not-allowed; }
+.primary{
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   color:white;
 }
 
-button:disabled{
-  opacity:.55;
-  cursor:not-allowed;
+.warning{
+  font-size:12px;
+  color: rgba(0,0,0,.58);
+  margin-top:6px;
+  min-height:16px;
+}
+.warning strong{ color: rgba(168,85,247,.95); }
+
+.logbox{
+  width:min(860px, 100%);
+  padding:14px;
+}
+.loghead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.logtitle{
+  font-weight:900;
+  font-size:14px;
+}
+.copybtn{
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(168,85,247,.10);
+  border-radius:12px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:900;
+}
+.copybtn:active{ transform: translateY(1px); }
+
+.toggle{
+  margin-top:10px;
+  border-top:1px dashed rgba(168,85,247,.22);
+  padding-top:10px;
+}
+.toggler{
+  cursor:pointer;
+  font-weight:900;
+  font-size:13px;
+  user-select:none;
+}
+.past{
+  margin-top:10px;
+  display:none;
+}
+.past.show{ display:block; }
+
+.mini{
+  font-size:12px;
+  color: var(--muted);
+  margin-top:6px;
 }
 
-/* ===== Logs ===== */
-.logbox{
-  width:100%;
-  max-width:860px;
+  /* ===== Right stats panel ===== */
+.shell{
+  grid-template-columns: 320px 1fr 360px; /* + stats */
+}
+
+.stats{
+  height:100%;
+  padding:14px;
+  border-left: 1px solid var(--panelBorder);
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
+  backdrop-filter: blur(10px);
+  overflow:auto;
+}
+
+.shell.collapsed{
+  grid-template-columns: 68px 1fr 360px;
+}
+
+.stats-card{
   padding:14px;
 }
 
-.loghead{
+.stats-top{
   display:flex;
-  justify-content:space-between;
   align-items:center;
+  justify-content:space-between;
   gap:10px;
+  margin-bottom:12px;
 }
 
-.logtitle{
-  font-weight:900;
+.tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
 
-.copybtn{
+.tab{
+  border:1px solid rgba(168,85,247,.16);
+  background: rgba(255,255,255,.85);
+  padding:8px 10px;
   border-radius:12px;
-  border:1px solid rgba(168,85,247,.18);
-  background:rgba(168,85,247,.12);
-  padding:8px 12px;
-  font-weight:900;
   cursor:pointer;
-}
-
-/* ===== Stats panel content ===== */
-.stats h3{
-  margin:4px 0 10px;
-  font-size:14px;
   font-weight:900;
+  font-size:12px;
+}
+.tab.active{
+  background: linear-gradient(135deg, rgba(168,85,247,.18), rgba(192,132,252,.14));
+  border-color: rgba(168,85,247,.35);
 }
 
-.stats .chart{
-  width:100%;
-  aspect-ratio:1/1;
-  border-radius:50%;
-  background:
-    conic-gradient(
-      var(--accent) 0deg,
-      var(--accent2) 120deg,
-      rgba(168,85,247,.15) 120deg 360deg
-    );
+.stats-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.select{
+  border:1px solid rgba(168,85,247,.16);
+  background: rgba(255,255,255,.90);
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:800;
+  font-size:12px;
+  outline:none;
+}
+
+.togglebtn{
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(168,85,247,.10);
+  border-radius:12px;
+  padding:8px 10px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:12px;
+}
+
+.donut-wrap{
+  margin-top:14px;
   display:grid;
   place-items:center;
 }
 
-.stats .chart span{
-  font-size:28px;
-  font-weight:900;
-}
-.shell.collapsed .sidebar .mini{ display:none; }
-
-/* Right sidebar collapsible */
-.shell.stats-collapsed{
-  grid-template-columns: 320px 1fr 72px;
-}
-.shell.stats-collapsed .stats-inner{ display:none; }
-.shell.stats-collapsed .statsbar{
-  padding:14px 10px;
-}
-.shell.stats-collapsed .statsbar .sb-top{
-  justify-content:center;
-}
-.shell.stats-collapsed .statsbar .sb-title,
-.shell.stats-collapsed .statsbar .mini{
-  display:none;
+.donut{
+  width:260px;
+  height:260px;
+  position:relative;
 }
 
-/* Add-task row only appears AFTER pressing + */
-.addrow{
-  display:none;
-  margin-top:8px;
+.donut svg{
+  width:100%;
+  height:100%;
+  transform: rotate(-90deg);
+  overflow:visible;
+}
+
+.donut .center{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  pointer-events:none;
+}
+
+.center .big{
+  font-size:44px;
+  font-weight:1000;
+  letter-spacing:.4px;
+  line-height:1;
+}
+.center .small{
+  margin-top:6px;
+  font-size:12px;
+  color: var(--muted);
+  font-weight:800;
+}
+
+.legend{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
   gap:8px;
 }
-.addrow.show{ display:flex; }
-/* ===== Responsive ===== */
-@media(max-width:1100px){
-  .shell{
-    grid-template-columns: 280px 1fr;
-  }
-  .stats{
-    display:none;
-  }
+
+.leg-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(168,85,247,.12);
+  background: rgba(255,255,255,.72);
+  font-size:13px;
 }
 
-@media(max-width:860px){
-  .shell{
-    grid-template-columns:1fr;
-  }
+.dot{
+  width:10px; height:10px;
+  border-radius:999px;
+  flex:0 0 10px;
+  box-shadow:0 8px 18px rgba(0,0,0,.10);
+}
+
+.leg-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.leg-left span{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-weight:900;
+}
+.leg-right{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+}
+.leg-right b{ font-weight:1000; }
+.leg-right small{ color:var(--muted); font-weight:900; }
+
+.bars{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.bar{
+  border:1px solid rgba(168,85,247,.12);
+  background: rgba(255,255,255,.72);
+  border-radius:14px;
+  padding:10px;
+}
+
+.barhead{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+.bartrack{
+  height:12px;
+  border-radius:999px;
+  background: rgba(168,85,247,.12);
+  overflow:hidden;
+}
+.barfill{
+  height:100%;
+  border-radius:999px;
+  width:0%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  transition: width .25s ease;
+}
+
+/* Responsive: hide stats under content on small screens */
+@media (max-width:1100px){
+  .shell{ grid-template-columns: 320px 1fr; }
+  .stats{ display:none; }
+}
+
+@media (max-width:860px){
+  .shell{ grid-template-columns: 1fr; }
   .sidebar{
+    height:auto;
     border-right:none;
     border-bottom:1px solid var(--panelBorder);
   }
+  .shell.collapsed{ grid-template-columns: 1fr; }
+  .shell.collapsed .sidebar-inner{ display:block; }
 }
 </style>
-<!-- =================================================
-     BODY (solo el HTML dentro de <body> ... </body>)
-     ✅ Incluye: sidebar izquierda + main + sidebar derecha (stats)
-================================================== -->
+</head>
+
 <body>
+  <div class="petal-layer" id="petalLayer"></div>
 
-  <!-- Left + Main + Right -->
   <div class="shell" id="shell">
-
-    <!-- =======================
-         LEFT SIDEBAR (Tasks)
-    ======================== -->
     <aside class="sidebar">
       <div class="sb-top">
-        <button class="iconbtn" id="collapseStatsBtn" title="Collapse/Expand">≡</button>
+        <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
         <div class="sidebar-inner" style="flex:1;">
           <div class="sb-title">Projects & Tasks</div>
         </div>
@@ -307,12 +643,8 @@ button:disabled{
       </div>
     </aside>
 
-    <!-- =======================
-         MAIN APP
-    ======================== -->
     <main class="main">
       <div class="app">
-
         <div class="top">
           <div class="pill">
             <b id="modeLabel">Focus</b>
@@ -380,65 +712,69 @@ button:disabled{
         </div>
 
         <div class="mini" id="copyHint"></div>
-
       </div>
     </main>
-
-    <!-- =======================
-         RIGHT SIDEBAR (Stats)
-    ======================== -->
+  </div>
+    <!-- Right Stats -->
     <aside class="stats">
-      <div class="panel" style="padding:14px;">
-        <h3 style="margin:0 0 10px;">Stats</h3>
-
-        <!-- Tabs -->
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-          <button id="tabToday" class="primary" style="padding:8px 12px;">Today</button>
-          <button id="tabWeek" style="padding:8px 12px;">This Week</button>
-          <button id="tabMonth" style="padding:8px 12px;">This Month</button>
+      <div class="panel stats-card">
+        <div class="stats-top">
+          <div style="font-weight:1000;">Stats</div>
+          <button class="togglebtn" id="chartToggle">Circular</button>
         </div>
 
-        <!-- Chart mode toggle -->
-        <div class="pill" style="justify-content:space-between; margin-bottom:12px;">
-          <span>View</span>
-          <div style="display:flex; gap:8px;">
-            <button id="viewPie" class="primary" style="padding:8px 12px;">Circular</button>
-            <button id="viewBar" style="padding:8px 12px;">Linear</button>
+        <div class="tabs">
+          <button class="tab active" data-range="today">Today</button>
+          <button class="tab" data-range="week">This Week</button>
+          <button class="tab" data-range="month">This Month</button>
+        </div>
+
+        <div class="stats-controls">
+          <select class="select" id="groupBy">
+            <option value="project">Project</option>
+            <option value="task">Task</option>
+          </select>
+        </div>
+
+        <div class="donut-wrap" id="donutWrap">
+          <div class="donut">
+            <svg viewBox="0 0 120 120" id="donutSvg"></svg>
+            <div class="center">
+              <div class="big" id="donutTotal">0</div>
+              <div class="small">Minutes</div>
+            </div>
           </div>
         </div>
 
-        <!-- Chart holder -->
-        <div id="statsChart" class="chart">
-          <span id="statsTotal">0</span>
-        </div>
+        <div class="bars" id="barsWrap" style="display:none;"></div>
 
-        <div class="mini" id="statsSubtitle" style="margin-top:10px;">
-          Minutes tracked by project.
-        </div>
-
-        <!-- Legend / breakdown -->
-        <div id="statsLegend" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="legend" id="legend"></div>
       </div>
     </aside>
-
-  </div>
-
-  <!-- JS goes after this -->
-</body>
-<!-- =========================
-     ULTIMA PARTE (lo que faltaba)
-     ✅ Pega esto DESPUÉS del HTML del body que ya pusiste.
-     ✅ Incluye: cierre + <script> COMPLETO + cierre de </body></html>
-========================= -->
+ </div>
 <script>
 /* =========================
-   Helpers
+   Projects (fixed) + Storage
 ========================= */
+const PROJECTS = [
+  "Work (Celeste)",
+  "Work (Lenny)",
+  "Estudios",
+  "Practica",
+  "Portafolio",
+  "Proyecto"
+];
+
+const STORAGE_TASKS = "pomo_tasks_v1";
+const STORAGE_SESSIONS = "pomo_sessions_v1";
+const STORAGE_UI = "pomo_ui_v1";
+const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
+
 function uid(){
   return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
 }
-function safeId(s){
-  return String(s).replace(/\W+/g,"_");
+function safeId(str){
+  return String(str).toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9\-_]/g,"");
 }
 function loadJSON(key, fallback){
   try{
@@ -452,40 +788,15 @@ function loadJSON(key, fallback){
 function saveJSON(key, value){
   localStorage.setItem(key, JSON.stringify(value));
 }
-function clampNum(v, min, max, fallback){
-  const n = Number(v);
-  if(!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, n));
-}
 
 /* =========================
-   Fixed Projects
-========================= */
-const PROJECTS = [
-  "Work (Celeste)",
-  "Work (Lenny)",
-  "Estudios",
-  "Practica",
-  "Portafolio",
-  "Proyecto"
-];
-
-/* =========================
-   Storage Keys
-========================= */
-const STORAGE_TASKS = "pomo_tasks_v1";
-const STORAGE_SESSIONS = "pomo_sessions_v1";
-const STORAGE_UI = "pomo_ui_v1";
-
-/* =========================
-   Weekly / Day / Month keys
+   Weekly key (Monday-based)
 ========================= */
 function weekStartMonday(d = new Date()){
   const date = new Date(d);
   date.setHours(0,0,0,0);
-  // JS getDay(): 0=Sun..6=Sat
-  const day = date.getDay();
-  const diff = (day === 0 ? -6 : 1 - day); // move back to Monday
+  const day = date.getDay(); // 0=Sun..6=Sat
+  const diff = (day === 0 ? -6 : 1 - day);
   date.setDate(date.getDate() + diff);
   return date;
 }
@@ -494,20 +805,7 @@ function weekKey(d = new Date()){
   const y = ws.getFullYear();
   const m = String(ws.getMonth()+1).padStart(2,"0");
   const da = String(ws.getDate()).padStart(2,"0");
-  return `${y}-${m}-${da}`; // Monday date
-}
-function dayKey(d = new Date()){
-  const date = new Date(d);
-  const y = date.getFullYear();
-  const m = String(date.getMonth()+1).padStart(2,"0");
-  const da = String(date.getDate()).padStart(2,"0");
   return `${y}-${m}-${da}`;
-}
-function monthKey(d = new Date()){
-  const date = new Date(d);
-  const y = date.getFullYear();
-  const m = String(date.getMonth()+1).padStart(2,"0");
-  return `${y}-${m}`;
 }
 function prettyWeekLabel(key){
   const [y,m,d] = key.split("-").map(Number);
@@ -517,7 +815,7 @@ function prettyWeekLabel(key){
 }
 
 /* =========================
-   Load tasks + sessions + UI selection
+   Data: tasks + sessions
 ========================= */
 let tasksByProject = loadJSON(STORAGE_TASKS, null);
 if(!tasksByProject){
@@ -529,16 +827,14 @@ if(!tasksByProject){
 }
 
 let sessions = loadJSON(STORAGE_SESSIONS, []);
-// entry: { ts, weekKey, dayKey, monthKey, project, taskId, taskName, minutes }
+// { ts, weekKey, project, taskId, taskName, minutes }
 
 let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
 function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
 /* =========================
-   DOM refs (Main)
+   Elements
 ========================= */
-const shell = document.getElementById("shell");
-
 const ring = document.getElementById("ring");
 const timeEl = document.getElementById("time");
 const subEl = document.getElementById("sub");
@@ -555,6 +851,7 @@ const warningEl = document.getElementById("warning");
 const weeklyLogEl = document.getElementById("weeklyLog");
 const pastWeeksEl = document.getElementById("pastWeeks");
 const pastToggleEl = document.getElementById("pastToggle");
+
 const copyBtn = document.getElementById("copyBtn");
 const copyHint = document.getElementById("copyHint");
 
@@ -571,25 +868,13 @@ const btnSkip  = document.getElementById("skip");
 const btnReset = document.getElementById("reset");
 
 /* =========================
-   DOM refs (Left sidebar)
+   Clamp helpers
 ========================= */
-const projectsRoot = document.getElementById("projectsRoot");
-const collapseBtn = document.getElementById("collapseBtn");
-
-/* =========================
-   DOM refs (Right stats sidebar) — must exist in your HTML
-========================= */
-const collapseStatsBtn = document.getElementById("collapseStatsBtn");
-const tabToday = document.getElementById("tabToday");
-const tabWeek  = document.getElementById("tabWeek");
-const tabMonth = document.getElementById("tabMonth");
-const statsSubtitle = document.getElementById("statsSubtitle");
-const statsChart = document.getElementById("statsChart");
-const statsLegend = document.getElementById("statsLegend");
-
-/* =========================
-   Config getters
-========================= */
+function clampNum(v, min, max, fallback){
+  const n = Number(v);
+  if(!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
 function goalMinutes(){ return clampNum(goalMinInput.value, 10, 1200, 240); }
 function focusMinutes(){ return clampNum(focusInput.value, 5, 240, 35); }
 function shortBreakMinutes(){ return clampNum(shortBreakInput.value, 1, 90, 10); }
@@ -600,6 +885,7 @@ function longEvery(){ return clampNum(longEveryInput.value, 2, 12, 5); }
    Web Audio (code only)
 ========================= */
 let audioCtx = null;
+
 function ensureAudio(){
   if(audioCtx) return true;
   try{
@@ -617,7 +903,7 @@ function playTick(){
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, t0); // C5
+  osc.frequency.setValueAtTime(523.25, t0);
   gain.gain.setValueAtTime(0.0001, t0);
   gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
@@ -635,7 +921,7 @@ function playChime(){
   master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.25);
   master.connect(audioCtx.destination);
 
-  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
+  const freqs = [659.25, 880.00, 987.77];
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -656,6 +942,7 @@ function playChime(){
    Petals
 ========================= */
 let petalInterval = null;
+
 function spawnPetal(){
   const layer = document.getElementById("petalLayer");
   if(!layer) return;
@@ -691,6 +978,20 @@ function stopPetals(){
 }
 
 /* =========================
+   Timer state
+========================= */
+let mode = "focus";
+let pomos = 0;
+let total = focusMinutes() * 60;
+let remaining = total;
+
+let timer = null;
+let lastTick = null;
+
+let blockStartTs = null;
+let focusStartedRemaining = null;
+
+/* =========================
    Selection helpers
 ========================= */
 function selectedTaskObj(){
@@ -709,38 +1010,25 @@ function updateSelectedLabels(){
   }
   enforceStartLock();
 }
-
-/* =========================
-   Start lock
-========================= */
 function enforceStartLock(){
   const hasTask = !!selectedTaskObj();
-
   if(!hasTask){
     btnStart.disabled = true;
-    warningEl.innerHTML = `Choose a task before starting focus`;
-    return;
-  }
-
-  // has task
-  if(!timer && mode === "focus"){
-    btnStart.disabled = false;
+    warningEl.textContent = "Choose a task before starting focus";
   }else{
-    // allow start in break too (optional) — we let it run for breaks as well
-    btnStart.disabled = !!timer;
+    if(!timer) btnStart.disabled = false;
+    warningEl.textContent = "";
   }
-  warningEl.textContent = "";
 }
 
 /* =========================
-   Weekly summaries (minutes)
+   Weekly summaries
 ========================= */
 function sessionsThisWeek(){
   const wk = weekKey(new Date());
   return sessions.filter(s => s.weekKey === wk);
 }
 function groupWeekly(slist){
-  // { project: { total, tasks: {taskName: minutes} } }
   const out = {};
   for(const s of slist){
     if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
@@ -756,7 +1044,6 @@ function computeFocusedThisWeekMinutes(){
   for(const s of slist) sum += s.minutes;
   return sum;
 }
-
 function renderPastWeeks(){
   const current = weekKey(new Date());
   const keys = Array.from(new Set(sessions.map(s => s.weekKey)))
@@ -772,7 +1059,6 @@ function renderPastWeeks(){
   for(const k of keys){
     const slist = sessions.filter(s => s.weekKey === k);
     const grouped = groupWeekly(slist);
-
     let weekTotal = 0;
     Object.values(grouped).forEach(p => weekTotal += p.total);
 
@@ -790,17 +1076,14 @@ function renderPastWeeks(){
 
     html += `</div></div>`;
   }
-
   pastWeeksEl.innerHTML = html;
 }
-
 function renderWeeklyLog(){
   const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
   const grouped = groupWeekly(slist);
 
   document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
-
   const focusedMin = computeFocusedThisWeekMinutes();
   focusedLabel.textContent = String(focusedMin);
   goalLabel.textContent = String(goalMinutes());
@@ -815,7 +1098,6 @@ function renderWeeklyLog(){
       html += `<div style="margin-bottom:10px;">
         <div style="font-weight:900;">${project} — ${p.total} min</div>
         <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
-
       const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
       for(const [taskName, mins] of taskEntries){
         html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
@@ -823,16 +1105,13 @@ function renderWeeklyLog(){
           <b>${mins} min</b>
         </div>`;
       }
-
       html += `</div></div>`;
     }
     weeklyLogEl.innerHTML = html;
   }
 
   renderPastWeeks();
-  renderStats(); // keep stats in sync
 }
-
 function weeklySummaryText(){
   const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
@@ -857,7 +1136,6 @@ function weeklySummaryText(){
     }
     lines.push("");
   }
-
   return lines.join("\n").trim();
 }
 
@@ -873,20 +1151,6 @@ function nextBreakMins(nextPomo){
   return (nextPomo % longEvery() === 0) ? longBreakMinutes() : shortBreakMinutes();
 }
 
-/* Timer state */
-let mode = "focus"; // "focus" | "break"
-let pomos = 0;      // for long-break schedule
-
-let total = focusMinutes() * 60;
-let remaining = total;
-
-let timer = null;
-let lastTick = null;
-
-// real-minutes tracking per focus block
-let blockStartTs = null;
-let focusStartedRemaining = null;
-
 function setMode(newMode){
   mode = newMode;
 
@@ -896,7 +1160,6 @@ function setMode(newMode){
     modeLabel.textContent = "Focus";
     subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
   }else{
-    // long break happens AFTER every N focus pomos completed
     const isLong = (pomos % longEvery() === 0 && pomos !== 0);
     const mins = isLong ? longBreakMinutes() : shortBreakMinutes();
     total = mins * 60;
@@ -914,9 +1177,8 @@ function render(){
   const progress = 1 - (remaining / total);
   ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
 
+  // lock settings while running
   const running = !!timer;
-
-  // lock inputs while running
   focusInput.disabled = running;
   shortBreakInput.disabled = running;
   longBreakInput.disabled = running;
@@ -928,31 +1190,19 @@ function render(){
   btnSkip.disabled = false;
   btnReset.disabled = false;
 
-  // start lock: must have task for focus mode
-  if(mode === "focus"){
-    enforceStartLock();
-  }else{
-    // breaks can start/pause without task, but keep start disabled if already running
-    btnStart.disabled = running;
-    if(!selectedTaskObj() && !running){
-      warningEl.textContent = "";
-    }
-  }
+  enforceStartLock();
 }
 
 /* =========================
-   Session logging (minutes-only)
+   Session logging
 ========================= */
-function logFocusMinutes(minutes){
+function logFocusSession(minutes){
   const t = selectedTaskObj();
-  if(!t) return;
+  if(!t) return; // should not happen due to lock
 
-  const now = new Date();
   const entry = {
-    ts: now.toISOString(),
-    weekKey: weekKey(now),
-    dayKey: dayKey(now),
-    monthKey: monthKey(now),
+    ts: new Date().toISOString(),
+    weekKey: weekKey(new Date()),
     project: selected.project,
     taskId: t.id,
     taskName: t.name,
@@ -968,11 +1218,12 @@ function logPartialFocusIfNeeded(){
   if(blockStartTs === null || focusStartedRemaining === null) return;
 
   const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
-  const minutes = Math.round(elapsedSec / 60);
+  const minutes = Math.round(elapsedSec / 60); // redondeo a minuto
   if(minutes >= 1){
-    logFocusMinutes(minutes);
+    logFocusSession(minutes); // ahora con minutos reales
   }
 
+  // reset del tracking del bloque
   blockStartTs = null;
   focusStartedRemaining = null;
 }
@@ -983,8 +1234,8 @@ function logPartialFocusIfNeeded(){
 function startTimer(){
   if(timer) return;
 
-  // Must have task if starting focus
-  if(mode === "focus" && !selectedTaskObj()){
+  // Must have task
+  if(!selectedTaskObj()){
     enforceStartLock();
     return;
   }
@@ -993,8 +1244,7 @@ function startTimer(){
   playTick();
   startPetals();
 
-  // start tracking real minutes for focus blocks
-  if(mode === "focus" && blockStartTs === null){
+  if(blockStartTs === null){
     blockStartTs = Date.now();
     focusStartedRemaining = remaining;
   }
@@ -1018,14 +1268,14 @@ function startTimer(){
       timer = null;
       lastTick = null;
 
-      // block finished naturally
       if(mode === "focus"){
-        // log full scheduled block if it truly completed
-        // BUT we log actual by: since remaining reached 0, it's basically the full duration
-        // (avoid double count: use partial logger then reset)
-        logPartialFocusIfNeeded();
-        // if user ran full block, partial logger logs focusMinutes() exactly
-        // because elapsedSec ~= focusMinutes()*60
+        // log full focus block minutes to selected task/project
+        logFocusSession(focusMinutes());
+
+        // reset tracking de tiempo real
+        blockStartTs = null;
+        focusStartedRemaining = null;
+
         pomos += 1;
         setMode("break");
       }else{
@@ -1048,7 +1298,7 @@ function pauseTimer(){
   timer = null;
   lastTick = null;
 
-  // log partial only if in focus
+  // log partial minutes if we were focusing
   logPartialFocusIfNeeded();
 
   stopPetals();
@@ -1056,45 +1306,9 @@ function pauseTimer(){
 }
 
 function stopToBlockStart(){
-  // stop means: stop + reset current block to its start
-  clearInterval(timer);
-  timer = null;
-  lastTick = null;
-
-  // log partial minutes (focus only)
-  logPartialFocusIfNeeded();
-
-  stopPetals();
-
-  // reset clock of current block
+  // stop = pause + volver al inicio del bloque actual
+  pauseTimer();
   remaining = total;
-  render();
-}
-
-function skipBlock(){
-  // skip: advance block immediately
-  // If skipping focus -> log partial minutes (if any), count pomo completed, go break
-  // If skipping break -> go focus
-  unlockAudioOnUserGesture();
-
-  clearInterval(timer);
-  timer = null;
-  lastTick = null;
-  stopPetals();
-
-  if(mode === "focus"){
-    if(!selectedTaskObj()){
-      enforceStartLock();
-      render();
-      return;
-    }
-    logPartialFocusIfNeeded();
-    pomos += 1;
-    setMode("break");
-  }else{
-    setMode("focus");
-  }
-
   render();
 }
 
@@ -1102,23 +1316,44 @@ function skipBlock(){
    Buttons
 ========================= */
 btnStart.onclick = startTimer;
-btnPause.onclick = () => { unlockAudioOnUserGesture(); pauseTimer(); };
-btnStop.onclick  = () => { unlockAudioOnUserGesture(); stopToBlockStart(); };
-btnSkip.onclick  = skipBlock;
+
+btnPause.onclick = () => {
+  unlockAudioOnUserGesture();
+  pauseTimer();
+};
+
+btnStop.onclick = () => {
+  unlockAudioOnUserGesture();
+  logPartialFocusIfNeeded();
+  stopToBlockStart();
+};
+
+// Skip: advance block
+// - If skipping focus, log partial focus minutes (if any) and advance
+btnSkip.onclick = () => {
+  unlockAudioOnUserGesture();
+
+  // stop interval but keep current remaining to compute partial
+  pauseTimer();
+
+  if(mode === "focus"){
+    if(!selectedTaskObj()){
+      enforceStartLock();
+      return;
+    }
+    // time already logged by pauseTimer() via logPartialFocusIfNeeded()
+    pomos += 1;
+    setMode("break");
+  }else{
+    setMode("focus");
+  }
+};
 
 btnReset.onclick = () => {
   unlockAudioOnUserGesture();
-  clearInterval(timer);
-  timer = null;
-  lastTick = null;
-
-  // if resetting focus while running/paused, log partial
-  logPartialFocusIfNeeded();
-
-  stopPetals();
+  pauseTimer();
   pomos = 0;
   setMode("focus");
-  render();
 };
 
 copyBtn.onclick = async () => {
@@ -1150,7 +1385,7 @@ pastToggleEl.onclick = () => {
 
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
 
-    // If not running, update the current block clock
+    // si NO está corriendo, el reloj debe reflejar el bloque actual
     if(!timer){
       if(mode === "focus"){
         total = focusMinutes() * 60;
@@ -1163,9 +1398,6 @@ pastToggleEl.onclick = () => {
         remaining = total;
         subEl.textContent = `(next focus: ${focusMinutes()}m)`;
       }
-      // reset tracking if user changes config mid-focus while not running
-      blockStartTs = null;
-      focusStartedRemaining = null;
     }
 
     renderWeeklyLog();
@@ -1174,8 +1406,14 @@ pastToggleEl.onclick = () => {
 });
 
 /* =========================
-   Sidebar rendering (Left)
+   Sidebar rendering
 ========================= */
+const projectsRoot = document.getElementById("projectsRoot");
+
+function safeId(s){
+  return String(s).replace(/\W+/g,"_");
+}
+
 function renderSidebar(){
   let html = "";
   for(const project of PROJECTS){
@@ -1221,37 +1459,21 @@ projectsRoot.addEventListener("click", (e) => {
 
   const action = el.getAttribute("data-action");
   const project = el.getAttribute("data-project");
-  const addId = `add-${safeId(project)}`;
 
   if(action === "toggleAdd"){
-    document.querySelectorAll(".addrow.show").forEach(r => {
-      if(r.id !== addId) r.classList.remove("show");
-    });
-
-    const row = document.getElementById(addId);
+    const row = document.getElementById(`add-${safeId(project)}`);
+    if(!row) return;
     row.classList.toggle("show");
     const inp = row.querySelector("input");
     setTimeout(()=>inp?.focus?.(), 0);
-
-    if(inp && !inp.__bound){
-      inp.__bound = true;
-      inp.addEventListener("keydown", (ev) => {
-        if(ev.key === "Enter"){
-          row.querySelector('button[data-action="addTask"]')?.click();
-        }
-        if(ev.key === "Escape"){
-          row.classList.remove("show");
-          inp.value = "";
-        }
-      });
-    }
     return;
   }
 
   if(action === "addTask"){
-    const row = document.getElementById(addId);
+    const row = document.getElementById(`add-${safeId(project)}`);
+    if(!row) return;
     const inp = row.querySelector("input");
-    const name = (inp.value || "").trim();
+    const name = (inp?.value || "").trim();
     if(!name) return;
 
     tasksByProject[project].push({ id: uid(), name });
@@ -1277,143 +1499,19 @@ projectsRoot.addEventListener("click", (e) => {
 });
 
 /* =========================
-   Collapse sidebars
+   Collapse sidebar
 ========================= */
-(function initCollapseLeft(){
+const shell = document.getElementById("shell");
+const collapseBtn = document.getElementById("collapseBtn");
+
+(function initCollapse(){
   const ui = loadJSON(STORAGE_UI + "_collapse", { collapsed:false });
   if(ui.collapsed) shell.classList.add("collapsed");
-  if(collapseBtn){
-    collapseBtn.onclick = () => {
-      shell.classList.toggle("collapsed");
-      saveJSON(STORAGE_UI + "_collapse", { collapsed: shell.classList.contains("collapsed") });
-    };
-  }
+  collapseBtn.onclick = () => {
+    shell.classList.toggle("collapsed");
+    saveJSON(STORAGE_UI + "_collapse", { collapsed: shell.classList.contains("collapsed") });
+  };
 })();
-
-(function initCollapseRight(){
-  const ui = loadJSON(STORAGE_UI + "_statsCollapse", { collapsed:false });
-  if(ui.collapsed) shell.classList.add("stats-collapsed");
-  if(collapseStatsBtn){
-    collapseStatsBtn.onclick = () => {
-      shell.classList.toggle("stats-collapsed");
-      saveJSON(STORAGE_UI + "_statsCollapse", { collapsed: shell.classList.contains("stats-collapsed") });
-    };
-  }
-})();
-
-/* =========================
-   Stats (Pie only) — Today/Week/Month
-========================= */
-let statsScope = loadJSON("pomo_stats_scope_v1", "week");
-
-function setActiveBtn(btn, active){
-  if(!btn) return;
-  btn.classList.toggle("primary", !!active);
-}
-
-function sessionsByScope(scope){
-  const now = new Date();
-  if(scope === "today"){
-    const dk = dayKey(now);
-    return sessions.filter(s => (s.dayKey || dayKey(new Date(s.ts))) === dk);
-  }
-  if(scope === "month"){
-    const mk = monthKey(now);
-    return sessions.filter(s => (s.monthKey || monthKey(new Date(s.ts))) === mk);
-  }
-  const wk = weekKey(now);
-  return sessions.filter(s => s.weekKey === wk);
-}
-
-function totalsByProject(slist){
-  const totals = {};
-  for(const p of PROJECTS) totals[p] = 0;
-  for(const s of slist){
-    if(!totals[s.project]) totals[s.project] = 0;
-    totals[s.project] += s.minutes;
-  }
-  return totals;
-}
-
-function sumTotals(totals){
-  return Object.values(totals).reduce((a,b)=>a+b,0);
-}
-
-function toPieConic(totals){
-  const entries = Object.entries(totals).filter(([,v])=>v>0);
-  if(entries.length === 0) return "conic-gradient(rgba(168,85,247,.18) 0 360deg)";
-
-  const sum = entries.reduce((a,[,v])=>a+v,0);
-  let acc = 0;
-
-  const palette = [
-    "rgba(168,85,247,.92)",
-    "rgba(192,132,252,.90)",
-    "rgba(168,85,247,.55)",
-    "rgba(192,132,252,.55)",
-    "rgba(168,85,247,.30)",
-    "rgba(192,132,252,.30)"
-  ];
-
-  const stops = [];
-  entries.forEach(([,v], i) => {
-    const a0 = acc;
-    acc += (v/sum) * 360;
-    const color = palette[i % palette.length];
-    stops.push(`${color} ${a0}deg ${acc}deg`);
-  });
-
-  return `conic-gradient(${stops.join(",")})`;
-}
-
-function renderStatsLegend(totals){
-  if(!statsLegend) return;
-  const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-  if(entries.length === 0){
-    statsLegend.innerHTML = `<div class="mini">No minutes yet for this range.</div>`;
-    return;
-  }
-  const total = sumTotals(totals);
-  let html = "";
-  for(const [name, mins] of entries){
-    const pct = total ? Math.round((mins/total)*100) : 0;
-    html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
-      <span>${name}</span>
-      <b>${mins}m <span style="opacity:.55; font-weight:800;">(${pct}%)</span></b>
-    </div>`;
-  }
-  statsLegend.innerHTML = html;
-}
-
-function renderStats(){
-  if(!statsChart) return;
-
-  const slist = sessionsByScope(statsScope);
-  const totals = totalsByProject(slist);
-  const total = sumTotals(totals);
-
-  statsChart.innerHTML = `<span id="statsTotal">${total}</span>`;
-  statsChart.style.background = toPieConic(totals);
-
-  const label = (statsScope === "today") ? "Today" : (statsScope === "month") ? "This month" : "This week";
-  if(statsSubtitle) statsSubtitle.textContent = `${label} • Minutes by project`;
-
-  renderStatsLegend(totals);
-
-  setActiveBtn(tabToday, statsScope === "today");
-  setActiveBtn(tabWeek,  statsScope === "week");
-  setActiveBtn(tabMonth, statsScope === "month");
-}
-
-function setScope(scope){
-  statsScope = scope;
-  saveJSON("pomo_stats_scope_v1", statsScope);
-  renderStats();
-}
-
-tabToday?.addEventListener("click", ()=>setScope("today"));
-tabWeek?.addEventListener("click", ()=>setScope("week"));
-tabMonth?.addEventListener("click", ()=>setScope("month"));
 
 /* =========================
    Init
@@ -1423,8 +1521,246 @@ updateSelectedLabels();
 
 setMode("focus");
 renderWeeklyLog();
-renderStats();
 render();
+  /* =========================
+   Stats panel (Right)
+========================= */
+const STAT_UI_KEY = "pomo_stats_ui_v1";
+let statUI = loadJSON(STAT_UI_KEY, { range:"week", view:"donut", groupBy:"project" });
+
+const donutSvg = document.getElementById("donutSvg");
+const donutTotalEl = document.getElementById("donutTotal");
+const legendEl = document.getElementById("legend");
+const donutWrap = document.getElementById("donutWrap");
+const barsWrap = document.getElementById("barsWrap");
+const groupBySel = document.getElementById("groupBy");
+const chartToggle = document.getElementById("chartToggle");
+
+const palette = [
+  "#A855F7", "#C084FC", "#D8B4FE", "#F5D0FE", "#FFC7F8", "#B794F4"
+];
+
+function saveStatUI(){ saveJSON(STAT_UI_KEY, statUI); }
+
+function startOfToday(){
+  const d = new Date(); d.setHours(0,0,0,0); return d;
+}
+function startOfMonth(){
+  const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d;
+}
+function inRange(tsISO, range){
+  const d = new Date(tsISO);
+  if(range === "today"){
+    return d >= startOfToday();
+  }
+  if(range === "month"){
+    return d >= startOfMonth();
+  }
+  // week = current monday weekKey
+  return weekKey(d) === weekKey(new Date());
+}
+
+function getStatRows(){
+  const range = statUI.range;
+  const groupBy = statUI.groupBy;
+
+  const filtered = sessions.filter(s => inRange(s.ts, range));
+  const map = new Map(); // key -> minutes, label -> minutes
+
+  for(const s of filtered){
+    const key = (groupBy === "task")
+      ? `${s.project}__${s.taskName}`
+      : s.project;
+
+    const label = (groupBy === "task")
+      ? `${s.taskName} (${s.project})`
+      : s.project;
+
+    map.set(key, (map.get(key) || 0) + s.minutes);
+    map.set(key + "__label", label);
+  }
+
+  const rows = [];
+  for(const [k,v] of map.entries()){
+    if(k.endsWith("__label")) continue;
+    const label = map.get(k + "__label");
+    rows.push({ key:k, label, minutes:v });
+  }
+
+  rows.sort((a,b)=> b.minutes - a.minutes);
+  return rows;
+}
+
+function donutSegment(cx, cy, r, startAngle, endAngle){
+  const toXY = (ang) => {
+    const rad = (Math.PI/180) * ang;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+  const s = toXY(startAngle);
+  const e = toXY(endAngle);
+  const large = (endAngle - startAngle) > 180 ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+}
+
+function renderDonut(rows){
+  donutSvg.innerHTML = "";
+  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
+  donutTotalEl.textContent = String(total);
+
+  // base ring track
+  const track = document.createElementNS("http://www.w3.org/2000/svg","circle");
+  track.setAttribute("cx","60");
+  track.setAttribute("cy","60");
+  track.setAttribute("r","44");
+  track.setAttribute("fill","none");
+  track.setAttribute("stroke","rgba(168,85,247,.14)");
+  track.setAttribute("stroke-width","12");
+  donutSvg.appendChild(track);
+
+  if(total <= 0) return;
+
+  let angle = 0;
+  rows.slice(0, 8).forEach((row, idx) => {
+    const portion = row.minutes / total;
+    const sweep = Math.max(2, portion * 360); // minimum visible slice
+    const start = angle;
+    const end = angle + sweep;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d", donutSegment(60,60,44,start,end));
+    path.setAttribute("fill","none");
+    path.setAttribute("stroke", palette[idx % palette.length]);
+    path.setAttribute("stroke-width","12");
+    path.setAttribute("stroke-linecap","round");
+    path.setAttribute("opacity","0.95");
+
+    // tooltip
+    const title = document.createElementNS("http://www.w3.org/2000/svg","title");
+    const pct = Math.round((portion*100));
+    title.textContent = `${row.label}: ${row.minutes} min (${pct}%)`;
+    path.appendChild(title);
+
+    donutSvg.appendChild(path);
+    angle = end;
+  });
+}
+
+function renderBars(rows){
+  barsWrap.innerHTML = "";
+  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
+  donutTotalEl.textContent = String(total);
+
+  if(total <= 0){
+    barsWrap.innerHTML = `<div class="mini">No minutes logged in this range.</div>`;
+    return;
+  }
+
+  const top = rows.slice(0, 10);
+  const max = Math.max(...top.map(r=>r.minutes));
+
+  top.forEach((row) => {
+    const wrap = document.createElement("div");
+    wrap.className = "bar";
+    wrap.innerHTML = `
+      <div class="barhead">
+        <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${row.label}</span>
+        <span>${row.minutes} min</span>
+      </div>
+      <div class="bartrack"><div class="barfill"></div></div>
+    `;
+    barsWrap.appendChild(wrap);
+    const fill = wrap.querySelector(".barfill");
+    const pct = (row.minutes / max) * 100;
+    requestAnimationFrame(()=> fill.style.width = pct.toFixed(1) + "%");
+  });
+}
+
+function renderLegend(rows){
+  legendEl.innerHTML = "";
+  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
+
+  if(total <= 0){
+    legendEl.innerHTML = `<div class="mini">No minutes logged in this range yet.</div>`;
+    return;
+  }
+
+  rows.slice(0, 8).forEach((row, idx) => {
+    const pct = Math.round((row.minutes / total) * 100);
+    const item = document.createElement("div");
+    item.className = "leg-row";
+    item.innerHTML = `
+      <div class="leg-left">
+        <div class="dot" style="background:${palette[idx % palette.length]};"></div>
+        <span title="${row.label}">${row.label}</span>
+      </div>
+      <div class="leg-right">
+        <b>${row.minutes}</b><small>min</small><small>${pct}%</small>
+      </div>
+    `;
+    legendEl.appendChild(item);
+  });
+}
+
+function renderStats(){
+  if(!donutSvg || !legendEl) return;
+
+  groupBySel.value = statUI.groupBy;
+
+  const rows = getStatRows();
+  renderLegend(rows);
+
+  if(statUI.view === "donut"){
+    chartToggle.textContent = "Circular";
+    donutWrap.style.display = "";
+    barsWrap.style.display = "none";
+    renderDonut(rows);
+  }else{
+    chartToggle.textContent = "Linear";
+    donutWrap.style.display = "none";
+    barsWrap.style.display = "";
+    renderBars(rows);
+  }
+}
+
+function setRange(range){
+  statUI.range = range;
+  saveStatUI();
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.classList.toggle("active", b.dataset.range === range);
+  });
+  renderStats();
+}
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=> setRange(btn.dataset.range));
+});
+
+groupBySel.addEventListener("change", ()=>{
+  statUI.groupBy = groupBySel.value;
+  saveStatUI();
+  renderStats();
+});
+
+chartToggle.addEventListener("click", ()=>{
+  statUI.view = (statUI.view === "donut") ? "bars" : "donut";
+  saveStatUI();
+  renderStats();
+});
+
+/* Hook: whenever sessions change, refresh stats */
+const _origRenderWeeklyLog = renderWeeklyLog;
+renderWeeklyLog = function(){
+  _origRenderWeeklyLog();
+  renderStats();
+};
+
+/* Init stats UI */
+(function initStats(){
+  setRange(statUI.range);
+  groupBySel.value = statUI.groupBy;
+  renderStats();
+})();
 </script>
+
 </body>
 </html>
