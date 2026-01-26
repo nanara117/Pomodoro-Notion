@@ -752,6 +752,9 @@ let total = 35 * 60;
 let remaining = total;
 let timer = null;
 let lastTick = null;
+let blockStartTs = null;     // cuándo arrancó el bloque actual
+let focusStartedRemaining = null; // cuántos segundos quedaban al iniciar
+
 
 /* =========================
    Selection helpers
@@ -826,7 +829,7 @@ function renderWeeklyLog(){
 
   // Render weekly grouped view
   if(Object.keys(grouped).length === 0){
-    weeklyLogEl.innerHTML = `<div class="mini">No focus sessions logged yet this week.</div>`;
+    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
   }else{
     let html = "";
     for(const project of PROJECTS){
@@ -896,7 +899,7 @@ function weeklySummaryText(){
   lines.push("");
 
   if(Object.keys(grouped).length === 0){
-    lines.push("No focus sessions logged this week.");
+    lines.push("No focus minutes logged this week.");
     return lines.join("\n");
   }
 
@@ -986,6 +989,20 @@ function logFocusSession(minutes){
   saveJSON(STORAGE_SESSIONS, sessions);
   renderWeeklyLog();
 }
+  function logPartialFocusIfNeeded(){
+  if(mode !== "focus") return;
+  if(blockStartTs === null || focusStartedRemaining === null) return;
+
+  const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
+  const minutes = Math.round(elapsedSec / 60); // redondeo a minuto
+  if(minutes >= 1){
+    logFocusSession(minutes); // reusa tu logger, pero ahora con minutos reales
+  }
+
+  // reset del tracking del bloque
+  blockStartTs = null;
+  focusStartedRemaining = null;
+}
 
 /* =========================
    Timer controls
@@ -1002,6 +1019,11 @@ function startTimer(){
   unlockAudioOnUserGesture();
   playTick();
   startPetals();
+
+  if(blockStartTs === null){
+  blockStartTs = Date.now();
+  focusStartedRemaining = remaining;
+}
 
   lastTick = Date.now();
   timer = setInterval(() => {
@@ -1022,15 +1044,19 @@ function startTimer(){
       timer = null;
       lastTick = null;
 
-      if(mode === "focus"){
-        // log full focus block minutes to selected task/project
-        logFocusSession(focusMinutes());
-        pomos += 1;
-        setMode("break");
-      }else{
-        setMode("focus");
-      }
+    if(mode === "focus"){
+  // log full focus block minutes to selected task/project
+  logFocusSession(focusMinutes());
 
+  // ✅ reset tracking de tiempo real
+  blockStartTs = null;
+  focusStartedRemaining = null;
+
+  pomos += 1;
+  setMode("break");
+}else{
+  setMode("focus");
+}
       stopPetals();
       render();
       return;
@@ -1046,6 +1072,7 @@ function pauseTimer(){
   clearInterval(timer);
   timer = null;
   lastTick = null;
+  logPartialFocusIfNeeded();
   stopPetals();
   render();
 }
@@ -1068,6 +1095,7 @@ btnPause.onclick = () => {
 
 btnStop.onclick = () => {
   unlockAudioOnUserGesture();
+  logPartialFocusIfNeeded();
   stopToBlockStart();
 };
 
@@ -1078,16 +1106,14 @@ btnSkip.onclick = () => {
   pauseTimer();
 
   if(mode === "focus"){
-    if(!selectedTaskObj()){
-      enforceStartLock();
-      return;
-    }
-    logFocusSession(focusMinutes());
-    pomos += 1;
-    setMode("break");
-  }else{
-    setMode("focus");
+  if(!selectedTaskObj()){
+    enforceStartLock();
+    return;
   }
+  pomos += 1;
+  setMode("break");
+}else{
+  setMode("focus");
 };
 
 btnReset.onclick = () => {
@@ -1124,12 +1150,23 @@ pastToggleEl.onclick = () => {
     longBreakInput.value = longBreakMinutes();
     longEveryInput.value = longEvery();
 
-    if(mode === "focus"){
-      subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
-    }else{
-      subEl.textContent = `(next focus: ${focusMinutes()}m)`;
-    }
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
+
+    // ✅ si NO está corriendo, el reloj debe reflejar el bloque actual
+    if(!timer){
+      if(mode === "focus"){
+        total = focusMinutes() * 60;
+        remaining = total;
+        subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
+      }else{
+        const isLong = (pomos % longEvery() === 0 && pomos !== 0);
+        const mins = isLong ? longBreakMinutes() : shortBreakMinutes();
+        total = mins * 60;
+        remaining = total;
+        subEl.textContent = `(next focus: ${focusMinutes()}m)`;
+      }
+    }
+
     renderWeeklyLog();
     render();
   });
