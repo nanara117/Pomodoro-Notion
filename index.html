@@ -11,11 +11,14 @@
 
   --accent:#A855F7;
   --accent2:#C084FC;
-
   --ringTrack:rgba(168,85,247,.18);
 
-  /* Petals */
   --petal:#FFC7F8;
+
+  --panelBg: rgba(255,255,255,.86);
+  --panelBorder: rgba(168,85,247,.16);
+  --text: #1f1f1f;
+  --muted: rgba(0,0,0,.55);
 }
 
 *{box-sizing:border-box}
@@ -25,6 +28,7 @@ html,body{
   height:100%;
   overflow:hidden;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
 }
 
 body{
@@ -33,11 +37,9 @@ body{
     radial-gradient(980px 640px at 80% 30%, rgba(192,132,252,.26), transparent 66%),
     linear-gradient(180deg, rgba(168,85,247,.10), transparent 52%),
     var(--bg);
-  display:grid;
-  place-items:center;
 }
 
-/* Petals layer */
+/* ===== Petals layer ===== */
 .petal-layer{
   position:fixed;
   inset:0;
@@ -45,7 +47,6 @@ body{
   z-index:1;
   overflow:hidden;
 }
-
 .petal{
   position:absolute;
   top:-70px;
@@ -60,7 +61,6 @@ body{
     sway var(--sway) ease-in-out infinite;
   will-change: transform, opacity;
 }
-
 .petal::after{
   content:"";
   position:absolute;
@@ -68,7 +68,6 @@ body{
   background:rgba(255,255,255,.28);
   border-radius:999px;
 }
-
 @keyframes fall{
   to{
     transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
@@ -80,23 +79,49 @@ body{
   50%{ margin-left: 18px; }
 }
 
-/* App */
-.app{
+/* ===== Layout ===== */
+.shell{
   position:relative;
   z-index:2;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:16px;
-  padding:18px;
-  width:min(980px, 100%);
+  height:100%;
+  display:grid;
+  grid-template-columns: 320px 1fr;
 }
 
-.top{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:center;
+.sidebar{
+  height:100%;
+  padding:14px;
+  border-right: 1px solid var(--panelBorder);
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
+  backdrop-filter: blur(10px);
+  overflow:auto;
+}
+
+.shell.collapsed{
+  grid-template-columns: 68px 1fr;
+}
+.shell.collapsed .sidebar-inner{
+  display:none;
+}
+.shell.collapsed .sidebar{
+  padding:14px 10px;
+}
+
+.main{
+  height:100%;
+  overflow:auto;
+  display:grid;
+  place-items:center;
+  padding:18px;
+}
+
+/* ===== Panels / Pills ===== */
+.panel{
+  background: var(--panelBg);
+  border: 1px solid var(--panelBorder);
+  border-radius:18px;
+  box-shadow:0 12px 34px rgba(0,0,0,.08);
+  backdrop-filter: blur(10px);
 }
 
 .pill{
@@ -111,8 +136,6 @@ body{
   gap:8px;
 }
 
-.pill b{font-weight:800}
-
 .pill input{
   width:64px;
   border:none;
@@ -124,12 +147,145 @@ body{
   font-weight:700;
   color:#2b2b2b;
 }
-
 .pill input.small{ width:54px; }
+.pill input:disabled{ opacity:.55; cursor:not-allowed; }
 
-.pill input:disabled{
-  opacity:.55;
-  cursor:not-allowed;
+/* ===== Sidebar UI ===== */
+.sb-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.sb-title{
+  font-weight:900;
+  font-size:14px;
+  letter-spacing:.2px;
+}
+
+.iconbtn{
+  width:38px; height:38px;
+  border-radius:12px;
+  border:1px solid var(--panelBorder);
+  background: rgba(255,255,255,.85);
+  box-shadow:0 10px 26px rgba(0,0,0,.08);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+}
+
+.project{
+  border:1px solid rgba(168,85,247,.14);
+  background: rgba(255,255,255,.72);
+  border-radius:16px;
+  padding:10px;
+  margin-bottom:10px;
+}
+
+.project-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.project-name{
+  font-weight:900;
+  font-size:13px;
+}
+.project-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.plusbtn{
+  width:30px; height:30px;
+  border-radius:10px;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(168,85,247,.10);
+  cursor:pointer;
+  font-weight:900;
+  display:grid;
+  place-items:center;
+}
+
+.tasklist{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.task{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(168,85,247,.12);
+  background: rgba(255,255,255,.85);
+  cursor:pointer;
+  font-size:13px;
+}
+
+.task small{
+  color: var(--muted);
+  font-weight:600;
+}
+
+.task.active{
+  border-color: rgba(168,85,247,.55);
+  box-shadow:0 10px 22px rgba(168,85,247,.10);
+  background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(192,132,252,.12));
+}
+
+.addrow{
+  display:none;
+  margin-top:8px;
+  gap:8px;
+}
+.addrow.show{ display:flex; }
+
+.addrow input{
+  flex:1;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(255,255,255,.90);
+  border-radius:12px;
+  padding:10px 10px;
+  outline:none;
+  font-weight:650;
+}
+
+.addrow button{
+  border:none;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:800;
+  background: linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+  box-shadow:0 12px 26px rgba(168,85,247,.18);
+}
+
+/* ===== Main app ===== */
+.app{
+  width:min(980px, 100%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+
+.top{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
 }
 
 .ring{
@@ -183,125 +339,286 @@ button{
   cursor:pointer;
   background:white;
   box-shadow:0 10px 30px rgba(0,0,0,.10);
-  font-weight:700;
+  font-weight:800;
 }
-
-button:disabled{
-  opacity:.55;
-  cursor:not-allowed;
-}
-
+button:disabled{ opacity:.55; cursor:not-allowed; }
 .primary{
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   color:white;
 }
 
-.hint{
+.warning{
   font-size:12px;
-  opacity:.65;
-  text-align:center;
-  max-width:520px;
+  color: rgba(0,0,0,.58);
+  margin-top:6px;
+  min-height:16px;
+}
+.warning strong{ color: rgba(168,85,247,.95); }
+
+.logbox{
+  width:min(860px, 100%);
+  padding:14px;
+}
+.loghead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.logtitle{
+  font-weight:900;
+  font-size:14px;
+}
+.copybtn{
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(168,85,247,.10);
+  border-radius:12px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:900;
+}
+.copybtn:active{ transform: translateY(1px); }
+
+.toggle{
+  margin-top:10px;
+  border-top:1px dashed rgba(168,85,247,.22);
+  padding-top:10px;
+}
+.toggler{
+  cursor:pointer;
+  font-weight:900;
+  font-size:13px;
+  user-select:none;
+}
+.past{
+  margin-top:10px;
+  display:none;
+}
+.past.show{ display:block; }
+
+.mini{
+  font-size:12px;
+  color: var(--muted);
+  margin-top:6px;
 }
 
-@media (max-width:460px){
-  .ring{ width:300px; height:300px; }
-  .inner{ width:244px; height:244px; }
-  .time{ font-size:58px; }
+@media (max-width:860px){
+  .shell{ grid-template-columns: 1fr; }
+  .sidebar{
+    height:auto;
+    border-right:none;
+    border-bottom:1px solid var(--panelBorder);
+  }
+  .shell.collapsed{ grid-template-columns: 1fr; }
+  .shell.collapsed .sidebar-inner{ display:block; } /* don't hide on mobile */
 }
 </style>
 </head>
 
 <body>
-  <!-- Petals -->
   <div class="petal-layer" id="petalLayer"></div>
 
-  <!-- App -->
-  <div class="app">
-    <div class="top">
-      <div class="pill">
-        <b id="modeLabel">Focus</b>
-        <span id="planLabel">• editable schedule</span>
+  <div class="shell" id="shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sb-top">
+        <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
+        <div class="sidebar-inner" style="flex:1;">
+          <div class="sb-title">Projects & Tasks</div>
+        </div>
+        <div style="width:38px;"></div>
       </div>
 
-      <div class="pill">
-        Goal (min)
-        <input id="goalMin" type="number" min="10" max="1200" value="240" />
+      <div class="sidebar-inner" id="projectsRoot"></div>
+
+      <div class="sidebar-inner mini">
+        Tip: selecciona una tarea y luego Start. Tus minutos se guardan por semana y quedan en historial.
       </div>
+    </aside>
 
-      <div class="pill">
-        Focused today:
-        <b id="focusedLabel">0</b>
-        <span>/</span>
-        <b id="goalLabel">240</b>
-        <span>min</span>
+    <!-- Main -->
+    <main class="main">
+      <div class="app">
+        <div class="top">
+          <div class="pill">
+            <b id="modeLabel">Focus</b>
+            <span id="planLabel">• editable schedule</span>
+          </div>
+
+          <div class="pill">
+            Goal (min)
+            <input id="goalMin" type="number" min="10" max="1200" value="240" />
+          </div>
+
+          <div class="pill">
+            Focused this week:
+            <b id="focusedLabel">0</b>
+            <span>/</span>
+            <b id="goalLabel">240</b>
+            <span>min</span>
+          </div>
+        </div>
+
+        <div class="top">
+          <div class="pill">Focus <input id="focusMin" type="number" min="5" max="240" value="35" /> min</div>
+          <div class="pill">Break <input id="shortBreakMin" type="number" min="1" max="90" value="10" /> min</div>
+          <div class="pill">Long <input id="longBreakMin" type="number" min="5" max="180" value="30" /> min</div>
+          <div class="pill">Every <input id="longEvery" class="small" type="number" min="2" max="12" value="5" /> pomos</div>
+        </div>
+
+        <div class="pill" style="max-width:860px; width:100%; justify-content:space-between;">
+          <div>
+            <b>Working on:</b>
+            <span id="currentTaskLabel" style="margin-left:6px; color:rgba(0,0,0,.7);">—</span>
+          </div>
+          <small id="currentProjectLabel" style="color:rgba(0,0,0,.5); font-weight:700;">—</small>
+        </div>
+
+        <div class="ring" id="ring" style="--progress:0">
+          <div class="inner">
+            <div class="time" id="time">35:00</div>
+            <div class="sub" id="sub">(next break: 10m)</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="primary" id="start">Start</button>
+          <button id="pause">Pause</button>
+          <button id="stop">Stop</button>
+          <button id="skip">Skip</button>
+          <button id="reset">Reset</button>
+        </div>
+
+        <div class="warning" id="warning"></div>
+
+        <div class="panel logbox" id="logPanel">
+          <div class="loghead">
+            <div class="logtitle" id="logTitle">🗓 Focus log — This week</div>
+            <button class="copybtn" id="copyBtn">Copy weekly summary</button>
+          </div>
+
+          <div id="weeklyLog"></div>
+
+          <div class="toggle">
+            <div class="toggler" id="pastToggle">▸ View past weeks</div>
+            <div class="past" id="pastWeeks"></div>
+          </div>
+        </div>
+
+        <div class="mini" id="copyHint"></div>
       </div>
-    </div>
-
-    <div class="top">
-      <div class="pill">
-        Focus
-        <input id="focusMin" type="number" min="5" max="240" value="35" /> min
-      </div>
-
-      <div class="pill">
-        Break
-        <input id="shortBreakMin" type="number" min="1" max="90" value="10" /> min
-      </div>
-
-      <div class="pill">
-        Long
-        <input id="longBreakMin" type="number" min="5" max="180" value="30" /> min
-      </div>
-
-      <div class="pill">
-        Every
-        <input id="longEvery" class="small" type="number" min="2" max="12" value="5" />
-        pomos
-      </div>
-    </div>
-
-    <div class="ring" id="ring" style="--progress:0">
-      <div class="inner">
-        <div class="time" id="time">35:00</div>
-        <div class="sub" id="sub">(next break: 10m)</div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <button class="primary" id="start">Start</button>
-      <button id="pause">Pause</button>
-      <button id="stop">Stop</button>
-      <button id="skip">Skip</button>
-      <button id="reset">Reset</button>
-    </div>
-
-    <div class="hint">
-      Pétalos + sonido solo mientras corre. Skip en Focus cuenta como bloque completado (para minutos y para el ciclo de long break).
-    </div>
+    </main>
   </div>
 
 <script>
 /* =========================
-   State + Elements
+   Projects (fixed) + Storage
 ========================= */
-let mode = "focus";         // "focus" | "break"
-let pomos = 0;              // completed focus blocks (for long-break schedule)
-let total = 35 * 60;        // current block total seconds
-let remaining = total;      // current block remaining seconds
+const PROJECTS = [
+  "Work (Celeste)",
+  "Work (Lenny)",
+  "Estudios",
+  "Practica",
+  "Portafolio",
+  "Proyecto"
+];
 
-let timer = null;
-let lastTick = null;
+const STORAGE_TASKS = "pomo_tasks_v1";
+const STORAGE_SESSIONS = "pomo_sessions_v1";
+const STORAGE_UI = "pomo_ui_v1";
 
-let focusedSecondsToday = 0; // daily progress in seconds
+function uid(){
+  return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
+}
 
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    return JSON.parse(raw);
+  }catch(e){
+    return fallback;
+  }
+}
+function saveJSON(key, value){
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+/* =========================
+   Weekly key (Monday-based)
+========================= */
+function weekStartMonday(d = new Date()){
+  const date = new Date(d);
+  date.setHours(0,0,0,0);
+
+  // JS getDay(): 0=Sun..6=Sat
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1 - day); // move back to Monday
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+function weekKey(d = new Date()){
+  const ws = weekStartMonday(d);
+  const y = ws.getFullYear();
+  const m = String(ws.getMonth()+1).padStart(2,"0");
+  const da = String(ws.getDate()).padStart(2,"0");
+  return `${y}-${m}-${da}`; // key = Monday date
+}
+
+function prettyWeekLabel(key){
+  // key is YYYY-MM-DD (Monday)
+  const [y,m,d] = key.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  const opts = { year:"numeric", month:"short", day:"numeric" };
+  return `Week of ${dt.toLocaleDateString("en-US", opts)}`;
+}
+
+/* =========================
+   Data: tasks + sessions
+========================= */
+let tasksByProject = loadJSON(STORAGE_TASKS, null);
+if(!tasksByProject){
+  tasksByProject = {};
+  PROJECTS.forEach(p => tasksByProject[p] = []);
+  saveJSON(STORAGE_TASKS, tasksByProject);
+}else{
+  // ensure all projects exist
+  PROJECTS.forEach(p => { if(!tasksByProject[p]) tasksByProject[p] = []; });
+}
+
+let sessions = loadJSON(STORAGE_SESSIONS, []); 
+// session shape: { ts, weekKey, project, taskId, taskName, minutes }
+
+let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
+
+function persistUI(){
+  saveJSON(STORAGE_UI, selected);
+}
+
+/* =========================
+   Pomodoro config inputs
+========================= */
 const ring = document.getElementById("ring");
 const timeEl = document.getElementById("time");
 const subEl = document.getElementById("sub");
 const modeLabel = document.getElementById("modeLabel");
 const planLabel = document.getElementById("planLabel");
 
-const focusedLabel = document.getElementById("focusedLabel");
 const goalLabel = document.getElementById("goalLabel");
+const focusedLabel = document.getElementById("focusedLabel");
+
+const currentTaskLabel = document.getElementById("currentTaskLabel");
+const currentProjectLabel = document.getElementById("currentProjectLabel");
+const warningEl = document.getElementById("warning");
+
+const weeklyLogEl = document.getElementById("weeklyLog");
+const pastWeeksEl = document.getElementById("pastWeeks");
+const pastToggleEl = document.getElementById("pastToggle");
+
+const copyBtn = document.getElementById("copyBtn");
+const copyHint = document.getElementById("copyHint");
 
 const goalMinInput = document.getElementById("goalMin");
 const focusInput = document.getElementById("focusMin");
@@ -316,33 +633,21 @@ const btnSkip  = document.getElementById("skip");
 const btnReset = document.getElementById("reset");
 
 /* =========================
-   Helpers (inputs)
+   Clamp helpers
 ========================= */
 function clampNum(v, min, max, fallback){
   const n = Number(v);
   if(!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }
-
-function goalMinutes(){
-  return clampNum(goalMinInput.value, 10, 1200, 240);
-}
-function focusMinutes(){
-  return clampNum(focusInput.value, 5, 240, 35);
-}
-function shortBreakMinutes(){
-  return clampNum(shortBreakInput.value, 1, 90, 10);
-}
-function longBreakMinutes(){
-  return clampNum(longBreakInput.value, 5, 180, 30);
-}
-function longEvery(){
-  return clampNum(longEveryInput.value, 2, 12, 5);
-}
+function goalMinutes(){ return clampNum(goalMinInput.value, 10, 1200, 240); }
+function focusMinutes(){ return clampNum(focusInput.value, 5, 240, 35); }
+function shortBreakMinutes(){ return clampNum(shortBreakInput.value, 1, 90, 10); }
+function longBreakMinutes(){ return clampNum(longBreakInput.value, 5, 180, 30); }
+function longEvery(){ return clampNum(longEveryInput.value, 2, 12, 5); }
 
 /* =========================
    Web Audio (code only)
-   (volume boosted)
 ========================= */
 let audioCtx = null;
 
@@ -351,73 +656,55 @@ function ensureAudio(){
   try{
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     return true;
-  }catch(e){
-    return false;
-  }
+  }catch(e){ return false; }
 }
-
 function unlockAudioOnUserGesture(){
   ensureAudio();
   audioCtx?.resume?.().catch(()=>{});
 }
-
 function playTick(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
-
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-
   osc.type = "sine";
   osc.frequency.setValueAtTime(523.25, t0); // C5
-
-  // louder than before
   gain.gain.setValueAtTime(0.0001, t0);
   gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
-
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-
   osc.start(t0);
   osc.stop(t0 + 0.16);
 }
-
 function playChime(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
-
-  // Master gain (boosted)
   const master = audioCtx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.exponentialRampToValueAtTime(0.32, t0 + 0.02);   // louder
+  master.gain.exponentialRampToValueAtTime(0.32, t0 + 0.02);
   master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.25);
   master.connect(audioCtx.destination);
 
-  // Slightly richer: 3 notes
   const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-
     osc.type = "sine";
     osc.frequency.setValueAtTime(f, t0);
-
     const start = t0 + i * 0.06;
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(0.60, start + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.90);
-
     osc.connect(gain);
     gain.connect(master);
-
     osc.start(start);
     osc.stop(start + 0.95);
   });
 }
 
 /* =========================
-   Petal rain (constant while running)
+   Petals
 ========================= */
 let petalInterval = null;
 
@@ -428,18 +715,15 @@ function spawnPetal(){
   const p = document.createElement("div");
   p.className = "petal";
 
-  const x = Math.random() * window.innerWidth;
-  p.style.left = x + "px";
+  p.style.left = (Math.random() * window.innerWidth) + "px";
 
-  const dx = (Math.random() * 280 - 140);      // wider spread
+  const dx = (Math.random() * 280 - 140);
   const rot = (Math.random() * 720 - 360);
-
-  const dur = (Math.random() * 2.2 + 4.0).toFixed(2) + "s";  // 4.0–6.2s
+  const dur = (Math.random() * 2.2 + 4.0).toFixed(2) + "s";
   const sway = (Math.random() * 1.3 + 1.0).toFixed(2) + "s";
+  const scale = (Math.random() * 0.9 + 0.95).toFixed(2);
 
-  const scale = (Math.random() * 0.9 + 0.95).toFixed(2);     // 0.95–1.85
   p.style.transform = `scale(${scale})`;
-
   p.style.setProperty("--dx", dx + "px");
   p.style.setProperty("--rot", rot + "deg");
   p.style.setProperty("--dur", dur);
@@ -452,23 +736,191 @@ function spawnPetal(){
 function startPetals(){
   if(petalInterval) return;
   for(let i=0;i<10;i++) spawnPetal();
-  petalInterval = setInterval(spawnPetal, 240); // a bit denser
+  petalInterval = setInterval(spawnPetal, 240);
 }
-
 function stopPetals(){
   clearInterval(petalInterval);
   petalInterval = null;
 }
 
 /* =========================
-   Rendering + Mode logic
+   Timer state
+========================= */
+let mode = "focus"; // "focus" | "break"
+let pomos = 0;      // for long-break schedule
+let total = 35 * 60;
+let remaining = total;
+let timer = null;
+let lastTick = null;
+
+/* =========================
+   Selection helpers
+========================= */
+function selectedTaskObj(){
+  if(!selected?.project || !selected?.taskId) return null;
+  const list = tasksByProject[selected.project] || [];
+  return list.find(t => t.id === selected.taskId) || null;
+}
+
+function updateSelectedLabels(){
+  const t = selectedTaskObj();
+  if(!t){
+    currentTaskLabel.textContent = "—";
+    currentProjectLabel.textContent = "—";
+  }else{
+    currentTaskLabel.textContent = t.name;
+    currentProjectLabel.textContent = selected.project;
+  }
+  enforceStartLock();
+}
+
+function enforceStartLock(){
+  const hasTask = !!selectedTaskObj();
+  if(!hasTask){
+    btnStart.disabled = true;
+    warningEl.innerHTML = `Choose a task before starting focus`;
+  }else{
+    // only enable if not running
+    if(!timer) btnStart.disabled = false;
+    warningEl.textContent = "";
+  }
+}
+
+/* =========================
+   Weekly summaries
+========================= */
+function sessionsThisWeek(){
+  const wk = weekKey(new Date());
+  return sessions.filter(s => s.weekKey === wk);
+}
+
+function groupWeekly(slist){
+  // { project: { total, tasks: {taskName: minutes} } }
+  const out = {};
+  for(const s of slist){
+    if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
+    out[s.project].total += s.minutes;
+    if(!out[s.project].tasks[s.taskName]) out[s.project].tasks[s.taskName] = 0;
+    out[s.project].tasks[s.taskName] += s.minutes;
+  }
+  return out;
+}
+
+function computeFocusedThisWeekMinutes(){
+  const slist = sessionsThisWeek();
+  let sum = 0;
+  for(const s of slist) sum += s.minutes;
+  return sum;
+}
+
+function renderWeeklyLog(){
+  const wk = weekKey(new Date());
+  const slist = sessionsThisWeek();
+  const grouped = groupWeekly(slist);
+
+  // Update header + focused minutes
+  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
+  const focusedMin = computeFocusedThisWeekMinutes();
+  focusedLabel.textContent = String(focusedMin);
+  goalLabel.textContent = String(goalMinutes());
+
+  // Render weekly grouped view
+  if(Object.keys(grouped).length === 0){
+    weeklyLogEl.innerHTML = `<div class="mini">No focus sessions logged yet this week.</div>`;
+  }else{
+    let html = "";
+    for(const project of PROJECTS){
+      if(!grouped[project]) continue;
+      const p = grouped[project];
+      html += `<div style="margin-bottom:10px;">
+        <div style="font-weight:900;">${project} — ${p.total} min</div>
+        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
+      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
+      for(const [taskName, mins] of taskEntries){
+        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
+          <span>${taskName}</span>
+          <b>${mins} min</b>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    weeklyLogEl.innerHTML = html;
+  }
+
+  renderPastWeeks();
+}
+
+function renderPastWeeks(){
+  // Build list of weekKeys excluding current, newest first
+  const current = weekKey(new Date());
+  const keys = Array.from(new Set(sessions.map(s => s.weekKey)))
+    .filter(k => k !== current)
+    .sort((a,b) => b.localeCompare(a));
+
+  if(keys.length === 0){
+    pastWeeksEl.innerHTML = `<div class="mini">No past weeks yet.</div>`;
+    return;
+  }
+
+  let html = "";
+  for(const k of keys){
+    const slist = sessions.filter(s => s.weekKey === k);
+    const grouped = groupWeekly(slist);
+    let weekTotal = 0;
+    Object.values(grouped).forEach(p => weekTotal += p.total);
+
+    html += `<div style="margin-top:12px; padding:10px; border-radius:14px; border:1px solid rgba(168,85,247,.14); background: rgba(255,255,255,.70);">
+      <div style="font-weight:900; display:flex; justify-content:space-between; gap:10px;">
+        <span>${prettyWeekLabel(k)}</span>
+        <span>${weekTotal} min</span>
+      </div>
+      <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">`;
+
+    for(const project of PROJECTS){
+      if(!grouped[project]) continue;
+      html += `<div style="font-weight:850;">${project} — ${grouped[project].total} min</div>`;
+    }
+
+    html += `</div></div>`;
+  }
+  pastWeeksEl.innerHTML = html;
+}
+
+function weeklySummaryText(){
+  const wk = weekKey(new Date());
+  const slist = sessionsThisWeek();
+  const grouped = groupWeekly(slist);
+
+  const lines = [];
+  lines.push(`🧠 Focus log — ${prettyWeekLabel(wk)}`);
+  lines.push("");
+
+  if(Object.keys(grouped).length === 0){
+    lines.push("No focus sessions logged this week.");
+    return lines.join("\n");
+  }
+
+  for(const project of PROJECTS){
+    if(!grouped[project]) continue;
+    const p = grouped[project];
+    lines.push(`${project} — ${p.total} min`);
+    const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
+    for(const [taskName, mins] of taskEntries){
+      lines.push(`  • ${taskName} — ${mins} min`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n").trim();
+}
+
+/* =========================
+   Mode logic + render
 ========================= */
 function fmt(sec){
   const m = Math.floor(sec/60).toString().padStart(2,"0");
   const s = Math.floor(sec%60).toString().padStart(2,"0");
   return `${m}:${s}`;
 }
-
 function nextBreakMins(nextPomo){
   return (nextPomo % longEvery() === 0) ? longBreakMinutes() : shortBreakMinutes();
 }
@@ -496,15 +948,8 @@ function setMode(newMode){
 
 function render(){
   timeEl.textContent = fmt(remaining);
-
   const progress = 1 - (remaining / total);
   ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
-
-  const focusedMin = Math.floor(focusedSecondsToday / 60);
-  focusedLabel.textContent = String(focusedMin);
-
-  const g = goalMinutes();
-  goalLabel.textContent = String(g);
 
   // lock settings while running
   const running = !!timer;
@@ -514,8 +959,32 @@ function render(){
   longEveryInput.disabled = running;
   goalMinInput.disabled = running;
 
-  btnStart.disabled = running;
   btnPause.disabled = !running;
+  btnStop.disabled = false;
+  btnSkip.disabled = false;
+  btnReset.disabled = false;
+
+  enforceStartLock();
+}
+
+/* =========================
+   Session logging
+========================= */
+function logFocusSession(minutes){
+  const t = selectedTaskObj();
+  if(!t) return; // should not happen due to lock
+
+  const entry = {
+    ts: new Date().toISOString(),
+    weekKey: weekKey(new Date()),
+    project: selected.project,
+    taskId: t.id,
+    taskName: t.name,
+    minutes
+  };
+  sessions.push(entry);
+  saveJSON(STORAGE_SESSIONS, sessions);
+  renderWeeklyLog();
 }
 
 /* =========================
@@ -523,6 +992,12 @@ function render(){
 ========================= */
 function startTimer(){
   if(timer) return;
+
+  // Must have task
+  if(!selectedTaskObj()){
+    enforceStartLock();
+    return;
+  }
 
   unlockAudioOnUserGesture();
   playTick();
@@ -541,24 +1016,21 @@ function startTimer(){
     if(remaining <= 0){
       remaining = 0;
       render();
-
       playChime();
 
-      // stop this block
       clearInterval(timer);
       timer = null;
       lastTick = null;
 
-      // If finished a focus block, add minutes toward daily goal
       if(mode === "focus"){
-        focusedSecondsToday += focusMinutes() * 60;
+        // log full focus block minutes to selected task/project
+        logFocusSession(focusMinutes());
         pomos += 1;
         setMode("break");
       }else{
         setMode("focus");
       }
 
-      // petals only while actively running
       stopPetals();
       render();
       return;
@@ -599,14 +1071,18 @@ btnStop.onclick = () => {
   stopToBlockStart();
 };
 
-// Skip: advance to next block
-// - If skipping focus, count it as completed focus (minutes + pomos)
+// Skip: advance block
+// - If skipping focus, count it as completed focus (and log minutes) by design
 btnSkip.onclick = () => {
   unlockAudioOnUserGesture();
   pauseTimer();
 
   if(mode === "focus"){
-    focusedSecondsToday += focusMinutes() * 60;
+    if(!selectedTaskObj()){
+      enforceStartLock();
+      return;
+    }
+    logFocusSession(focusMinutes());
     pomos += 1;
     setMode("break");
   }else{
@@ -617,36 +1093,160 @@ btnSkip.onclick = () => {
 btnReset.onclick = () => {
   unlockAudioOnUserGesture();
   pauseTimer();
-  focusedSecondsToday = 0;
   pomos = 0;
   setMode("focus");
 };
 
-// If user changes values while not running, update labels + sub text
+copyBtn.onclick = async () => {
+  try{
+    const txt = weeklySummaryText();
+    await navigator.clipboard.writeText(txt);
+    copyHint.textContent = "Copied ✅ Paste it into Notion.";
+    setTimeout(()=> copyHint.textContent = "", 2500);
+  }catch(e){
+    copyHint.textContent = "Couldn’t copy automatically — your browser blocked clipboard.";
+  }
+};
+
+pastToggleEl.onclick = () => {
+  const isOpen = pastWeeksEl.classList.toggle("show");
+  pastToggleEl.textContent = isOpen ? "▾ View past weeks" : "▸ View past weeks";
+};
+
+/* =========================
+   Inputs: normalize + refresh
+========================= */
 [goalMinInput, focusInput, shortBreakInput, longBreakInput, longEveryInput].forEach(el => {
   el.addEventListener("change", () => {
-    // normalize clamps visually
     goalMinInput.value = goalMinutes();
     focusInput.value = focusMinutes();
     shortBreakInput.value = shortBreakMinutes();
     longBreakInput.value = longBreakMinutes();
     longEveryInput.value = longEvery();
 
-    // refresh texts depending on current mode
     if(mode === "focus"){
       subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
     }else{
       subEl.textContent = `(next focus: ${focusMinutes()}m)`;
     }
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
+    renderWeeklyLog();
     render();
   });
 });
 
 /* =========================
+   Sidebar rendering
+========================= */
+const projectsRoot = document.getElementById("projectsRoot");
+
+function renderSidebar(){
+  let html = "";
+  for(const project of PROJECTS){
+    const tasks = tasksByProject[project] || [];
+    const addId = `add-${project.replace(/\W+/g,"_")}`;
+
+    html += `<div class="project" data-project="${project}">
+      <div class="project-head">
+        <div class="project-name">${project}</div>
+        <div class="project-actions">
+          <button class="plusbtn" data-action="toggleAdd" data-project="${project}" title="Add task">+</button>
+        </div>
+      </div>
+
+      <div class="addrow" id="${addId}">
+        <input type="text" placeholder="New task…" data-project="${project}" />
+        <button data-action="addTask" data-project="${project}">Add</button>
+      </div>
+
+      <div class="tasklist">`;
+
+    if(tasks.length === 0){
+      html += `<div class="mini" style="padding:8px 4px;">No tasks yet.</div>`;
+    }else{
+      for(const t of tasks){
+        const active = (selected.project === project && selected.taskId === t.id) ? "active" : "";
+        html += `<div class="task ${active}" data-action="selectTask" data-project="${project}" data-taskid="${t.id}">
+          <span>${t.name}</span>
+          <small>→</small>
+        </div>`;
+      }
+    }
+
+    html += `</div></div>`;
+  }
+
+  projectsRoot.innerHTML = html;
+}
+
+projectsRoot.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-action]");
+  if(!el) return;
+
+  const action = el.getAttribute("data-action");
+  const project = el.getAttribute("data-project");
+
+  if(action === "toggleAdd"){
+    const addId = `add-${project.replace(/\W+/g,"_")}`;
+    const row = document.getElementById(addId);
+    row.classList.toggle("show");
+    const inp = row.querySelector("input");
+    setTimeout(()=>inp?.focus?.(), 0);
+    return;
+  }
+
+  if(action === "addTask"){
+    const addId = `add-${project.replace(/\W+/g,"_")}`;
+    const row = document.getElementById(addId);
+    const inp = row.querySelector("input");
+    const name = (inp.value || "").trim();
+    if(!name) return;
+
+    tasksByProject[project].push({ id: uid(), name });
+    saveJSON(STORAGE_TASKS, tasksByProject);
+
+    inp.value = "";
+    row.classList.remove("show");
+
+    renderSidebar();
+    return;
+  }
+
+  if(action === "selectTask"){
+    const taskId = el.getAttribute("data-taskid");
+    selected.project = project;
+    selected.taskId = taskId;
+    persistUI();
+
+    renderSidebar();
+    updateSelectedLabels();
+    return;
+  }
+});
+
+/* =========================
+   Collapse sidebar
+========================= */
+const shell = document.getElementById("shell");
+const collapseBtn = document.getElementById("collapseBtn");
+
+(function initCollapse(){
+  const ui = loadJSON(STORAGE_UI + "_collapse", { collapsed:false });
+  if(ui.collapsed) shell.classList.add("collapsed");
+  collapseBtn.onclick = () => {
+    shell.classList.toggle("collapsed");
+    saveJSON(STORAGE_UI + "_collapse", { collapsed: shell.classList.contains("collapsed") });
+  };
+})();
+
+/* =========================
    Init
 ========================= */
+renderSidebar();
+updateSelectedLabels();
+
 setMode("focus");
+renderWeeklyLog();
 render();
 </script>
 
