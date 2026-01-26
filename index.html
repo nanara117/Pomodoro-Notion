@@ -234,7 +234,31 @@ button:disabled{
   font-size:28px;
   font-weight:900;
 }
+.shell.collapsed .sidebar .mini{ display:none; }
 
+/* Right sidebar collapsible */
+.shell.stats-collapsed{
+  grid-template-columns: 320px 1fr 72px;
+}
+.shell.stats-collapsed .stats-inner{ display:none; }
+.shell.stats-collapsed .statsbar{
+  padding:14px 10px;
+}
+.shell.stats-collapsed .statsbar .sb-top{
+  justify-content:center;
+}
+.shell.stats-collapsed .statsbar .sb-title,
+.shell.stats-collapsed .statsbar .mini{
+  display:none;
+}
+
+/* Add-task row only appears AFTER pressing + */
+.addrow{
+  display:none;
+  margin-top:8px;
+  gap:8px;
+}
+.addrow.show{ display:flex; }
 /* ===== Responsive ===== */
 @media(max-width:1100px){
   .shell{
@@ -269,7 +293,7 @@ button:disabled{
     ======================== -->
     <aside class="sidebar">
       <div class="sb-top">
-        <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
+        <button class="iconbtn" id="collapseStatsBtn" title="Collapse/Expand">≡</button>
         <div class="sidebar-inner" style="flex:1;">
           <div class="sb-title">Projects & Tasks</div>
         </div>
@@ -408,26 +432,14 @@ button:disabled{
 ========================= -->
 <script>
 /* =========================
-   Projects (fixed) + Storage
+   Helpers
 ========================= */
-const PROJECTS = [
-  "Work (Celeste)",
-  "Work (Lenny)",
-  "Estudios",
-  "Practica",
-  "Portafolio",
-  "Proyecto"
-];
-
-const STORAGE_TASKS = "pomo_tasks_v1";
-const STORAGE_SESSIONS = "pomo_sessions_v1";
-const STORAGE_UI = "pomo_ui_v1";
-const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
-
 function uid(){
   return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
 }
-
+function safeId(s){
+  return String(s).replace(/\W+/g,"_");
+}
 function loadJSON(key, fallback){
   try{
     const raw = localStorage.getItem(key);
@@ -440,31 +452,63 @@ function loadJSON(key, fallback){
 function saveJSON(key, value){
   localStorage.setItem(key, JSON.stringify(value));
 }
-
-function safeId(str){
-  return String(str).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+function clampNum(v, min, max, fallback){
+  const n = Number(v);
+  if(!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
 }
 
 /* =========================
-   Weekly key (Monday-based)
+   Fixed Projects
+========================= */
+const PROJECTS = [
+  "Work (Celeste)",
+  "Work (Lenny)",
+  "Estudios",
+  "Practica",
+  "Portafolio",
+  "Proyecto"
+];
+
+/* =========================
+   Storage Keys
+========================= */
+const STORAGE_TASKS = "pomo_tasks_v1";
+const STORAGE_SESSIONS = "pomo_sessions_v1";
+const STORAGE_UI = "pomo_ui_v1";
+
+/* =========================
+   Weekly / Day / Month keys
 ========================= */
 function weekStartMonday(d = new Date()){
   const date = new Date(d);
   date.setHours(0,0,0,0);
-  const day = date.getDay(); // 0=Sun..6=Sat
-  const diff = (day === 0 ? -6 : 1 - day);
+  // JS getDay(): 0=Sun..6=Sat
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1 - day); // move back to Monday
   date.setDate(date.getDate() + diff);
   return date;
 }
-
 function weekKey(d = new Date()){
   const ws = weekStartMonday(d);
   const y = ws.getFullYear();
   const m = String(ws.getMonth()+1).padStart(2,"0");
   const da = String(ws.getDate()).padStart(2,"0");
+  return `${y}-${m}-${da}`; // Monday date
+}
+function dayKey(d = new Date()){
+  const date = new Date(d);
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,"0");
+  const da = String(date.getDate()).padStart(2,"0");
   return `${y}-${m}-${da}`;
 }
-
+function monthKey(d = new Date()){
+  const date = new Date(d);
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,"0");
+  return `${y}-${m}`;
+}
 function prettyWeekLabel(key){
   const [y,m,d] = key.split("-").map(Number);
   const dt = new Date(y, m-1, d);
@@ -473,22 +517,7 @@ function prettyWeekLabel(key){
 }
 
 /* =========================
-   Date keys for stats
-========================= */
-function dayKey(d = new Date()){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const da = String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${da}`;
-}
-function monthKey(d = new Date()){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  return `${y}-${m}`;
-}
-
-/* =========================
-   Data: tasks + sessions
+   Load tasks + sessions + UI selection
 ========================= */
 let tasksByProject = loadJSON(STORAGE_TASKS, null);
 if(!tasksByProject){
@@ -500,15 +529,16 @@ if(!tasksByProject){
 }
 
 let sessions = loadJSON(STORAGE_SESSIONS, []);
-// entry: { ts, weekKey, project, taskId, taskName, minutes }
+// entry: { ts, weekKey, dayKey, monthKey, project, taskId, taskName, minutes }
 
 let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
-
 function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
 /* =========================
-   DOM refs
+   DOM refs (Main)
 ========================= */
+const shell = document.getElementById("shell");
+
 const ring = document.getElementById("ring");
 const timeEl = document.getElementById("time");
 const subEl = document.getElementById("sub");
@@ -525,7 +555,6 @@ const warningEl = document.getElementById("warning");
 const weeklyLogEl = document.getElementById("weeklyLog");
 const pastWeeksEl = document.getElementById("pastWeeks");
 const pastToggleEl = document.getElementById("pastToggle");
-
 const copyBtn = document.getElementById("copyBtn");
 const copyHint = document.getElementById("copyHint");
 
@@ -541,29 +570,26 @@ const btnStop  = document.getElementById("stop");
 const btnSkip  = document.getElementById("skip");
 const btnReset = document.getElementById("reset");
 
+/* =========================
+   DOM refs (Left sidebar)
+========================= */
 const projectsRoot = document.getElementById("projectsRoot");
-const shell = document.getElementById("shell");
 const collapseBtn = document.getElementById("collapseBtn");
 
-/* ===== Stats DOM ===== */
+/* =========================
+   DOM refs (Right stats sidebar) — must exist in your HTML
+========================= */
+const collapseStatsBtn = document.getElementById("collapseStatsBtn");
 const tabToday = document.getElementById("tabToday");
 const tabWeek  = document.getElementById("tabWeek");
 const tabMonth = document.getElementById("tabMonth");
-const viewPie  = document.getElementById("viewPie");
-const viewBar  = document.getElementById("viewBar");
+const statsSubtitle = document.getElementById("statsSubtitle");
 const statsChart = document.getElementById("statsChart");
 const statsLegend = document.getElementById("statsLegend");
-const statsTotal = document.getElementById("statsTotal");
-const statsSubtitle = document.getElementById("statsSubtitle");
 
 /* =========================
-   Clamp helpers
+   Config getters
 ========================= */
-function clampNum(v, min, max, fallback){
-  const n = Number(v);
-  if(!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, n));
-}
 function goalMinutes(){ return clampNum(goalMinInput.value, 10, 1200, 240); }
 function focusMinutes(){ return clampNum(focusInput.value, 5, 240, 35); }
 function shortBreakMinutes(){ return clampNum(shortBreakInput.value, 1, 90, 10); }
@@ -574,7 +600,6 @@ function longEvery(){ return clampNum(longEveryInput.value, 2, 12, 5); }
    Web Audio (code only)
 ========================= */
 let audioCtx = null;
-
 function ensureAudio(){
   if(audioCtx) return true;
   try{
@@ -592,7 +617,7 @@ function playTick(){
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, t0);
+  osc.frequency.setValueAtTime(523.25, t0); // C5
   gain.gain.setValueAtTime(0.0001, t0);
   gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
@@ -610,7 +635,7 @@ function playChime(){
   master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.25);
   master.connect(audioCtx.destination);
 
-  const freqs = [659.25, 880.00, 987.77];
+  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -631,7 +656,6 @@ function playChime(){
    Petals
 ========================= */
 let petalInterval = null;
-
 function spawnPetal(){
   const layer = document.getElementById("petalLayer");
   if(!layer) return;
@@ -656,7 +680,6 @@ function spawnPetal(){
   layer.appendChild(p);
   setTimeout(() => p.remove(), 9000);
 }
-
 function startPetals(){
   if(petalInterval) return;
   for(let i=0;i<10;i++) spawnPetal();
@@ -668,20 +691,6 @@ function stopPetals(){
 }
 
 /* =========================
-   Timer state
-========================= */
-let mode = "focus";  // "focus" | "break"
-let pomos = 0;
-let total = focusMinutes() * 60;
-let remaining = total;
-let timer = null;
-let lastTick = null;
-
-// partial-focus tracking
-let blockStartTs = null;
-let focusStartedRemaining = null;
-
-/* =========================
    Selection helpers
 ========================= */
 function selectedTaskObj(){
@@ -689,7 +698,6 @@ function selectedTaskObj(){
   const list = tasksByProject[selected.project] || [];
   return list.find(t => t.id === selected.taskId) || null;
 }
-
 function updateSelectedLabels(){
   const t = selectedTaskObj();
   if(!t){
@@ -702,26 +710,37 @@ function updateSelectedLabels(){
   enforceStartLock();
 }
 
+/* =========================
+   Start lock
+========================= */
 function enforceStartLock(){
   const hasTask = !!selectedTaskObj();
+
   if(!hasTask){
     btnStart.disabled = true;
     warningEl.innerHTML = `Choose a task before starting focus`;
-  }else{
-    if(!timer) btnStart.disabled = false;
-    warningEl.textContent = "";
+    return;
   }
+
+  // has task
+  if(!timer && mode === "focus"){
+    btnStart.disabled = false;
+  }else{
+    // allow start in break too (optional) — we let it run for breaks as well
+    btnStart.disabled = !!timer;
+  }
+  warningEl.textContent = "";
 }
 
 /* =========================
-   Weekly summaries
+   Weekly summaries (minutes)
 ========================= */
 function sessionsThisWeek(){
   const wk = weekKey(new Date());
   return sessions.filter(s => s.weekKey === wk);
 }
-
 function groupWeekly(slist){
+  // { project: { total, tasks: {taskName: minutes} } }
   const out = {};
   for(const s of slist){
     if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
@@ -731,47 +750,11 @@ function groupWeekly(slist){
   }
   return out;
 }
-
 function computeFocusedThisWeekMinutes(){
-  let sum = 0;
-  for(const s of sessionsThisWeek()) sum += s.minutes;
-  return sum;
-}
-
-function renderWeeklyLog(){
-  const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
-  const grouped = groupWeekly(slist);
-
-  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
-  const focusedMin = computeFocusedThisWeekMinutes();
-  focusedLabel.textContent = String(focusedMin);
-  goalLabel.textContent = String(goalMinutes());
-
-  if(Object.keys(grouped).length === 0){
-    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
-  }else{
-    let html = "";
-    for(const project of PROJECTS){
-      if(!grouped[project]) continue;
-      const p = grouped[project];
-      html += `<div style="margin-bottom:10px;">
-        <div style="font-weight:900;">${project} — ${p.total} min</div>
-        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
-      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
-      for(const [taskName, mins] of taskEntries){
-        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
-          <span>${taskName}</span>
-          <b>${mins} min</b>
-        </div>`;
-      }
-      html += `</div></div>`;
-    }
-    weeklyLogEl.innerHTML = html;
-  }
-
-  renderPastWeeks();
-  renderStats(); // keep stats synced
+  let sum = 0;
+  for(const s of slist) sum += s.minutes;
+  return sum;
 }
 
 function renderPastWeeks(){
@@ -789,6 +772,7 @@ function renderPastWeeks(){
   for(const k of keys){
     const slist = sessions.filter(s => s.weekKey === k);
     const grouped = groupWeekly(slist);
+
     let weekTotal = 0;
     Object.values(grouped).forEach(p => weekTotal += p.total);
 
@@ -806,7 +790,47 @@ function renderPastWeeks(){
 
     html += `</div></div>`;
   }
+
   pastWeeksEl.innerHTML = html;
+}
+
+function renderWeeklyLog(){
+  const wk = weekKey(new Date());
+  const slist = sessionsThisWeek();
+  const grouped = groupWeekly(slist);
+
+  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
+
+  const focusedMin = computeFocusedThisWeekMinutes();
+  focusedLabel.textContent = String(focusedMin);
+  goalLabel.textContent = String(goalMinutes());
+
+  if(Object.keys(grouped).length === 0){
+    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
+  }else{
+    let html = "";
+    for(const project of PROJECTS){
+      if(!grouped[project]) continue;
+      const p = grouped[project];
+      html += `<div style="margin-bottom:10px;">
+        <div style="font-weight:900;">${project} — ${p.total} min</div>
+        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
+
+      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
+      for(const [taskName, mins] of taskEntries){
+        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
+          <span>${taskName}</span>
+          <b>${mins} min</b>
+        </div>`;
+      }
+
+      html += `</div></div>`;
+    }
+    weeklyLogEl.innerHTML = html;
+  }
+
+  renderPastWeeks();
+  renderStats(); // keep stats in sync
 }
 
 function weeklySummaryText(){
@@ -833,6 +857,7 @@ function weeklySummaryText(){
     }
     lines.push("");
   }
+
   return lines.join("\n").trim();
 }
 
@@ -844,10 +869,23 @@ function fmt(sec){
   const s = Math.floor(sec%60).toString().padStart(2,"0");
   return `${m}:${s}`;
 }
-
 function nextBreakMins(nextPomo){
   return (nextPomo % longEvery() === 0) ? longBreakMinutes() : shortBreakMinutes();
 }
+
+/* Timer state */
+let mode = "focus"; // "focus" | "break"
+let pomos = 0;      // for long-break schedule
+
+let total = focusMinutes() * 60;
+let remaining = total;
+
+let timer = null;
+let lastTick = null;
+
+// real-minutes tracking per focus block
+let blockStartTs = null;
+let focusStartedRemaining = null;
 
 function setMode(newMode){
   mode = newMode;
@@ -858,6 +896,7 @@ function setMode(newMode){
     modeLabel.textContent = "Focus";
     subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
   }else{
+    // long break happens AFTER every N focus pomos completed
     const isLong = (pomos % longEvery() === 0 && pomos !== 0);
     const mins = isLong ? longBreakMinutes() : shortBreakMinutes();
     total = mins * 60;
@@ -876,6 +915,8 @@ function render(){
   ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
 
   const running = !!timer;
+
+  // lock inputs while running
   focusInput.disabled = running;
   shortBreakInput.disabled = running;
   longBreakInput.disabled = running;
@@ -887,21 +928,31 @@ function render(){
   btnSkip.disabled = false;
   btnReset.disabled = false;
 
-  enforceStartLock();
+  // start lock: must have task for focus mode
+  if(mode === "focus"){
+    enforceStartLock();
+  }else{
+    // breaks can start/pause without task, but keep start disabled if already running
+    btnStart.disabled = running;
+    if(!selectedTaskObj() && !running){
+      warningEl.textContent = "";
+    }
+  }
 }
 
 /* =========================
-   Session logging (minutes)
+   Session logging (minutes-only)
 ========================= */
 function logFocusMinutes(minutes){
   const t = selectedTaskObj();
   if(!t) return;
 
+  const now = new Date();
   const entry = {
-    ts: new Date().toISOString(),
-    weekKey: weekKey(new Date()),
-    dayKey: dayKey(new Date()),
-    monthKey: monthKey(new Date()),
+    ts: now.toISOString(),
+    weekKey: weekKey(now),
+    dayKey: dayKey(now),
+    monthKey: monthKey(now),
     project: selected.project,
     taskId: t.id,
     taskName: t.name,
@@ -914,11 +965,13 @@ function logFocusMinutes(minutes){
 
 function logPartialFocusIfNeeded(){
   if(mode !== "focus") return;
-  if(focusStartedRemaining === null) return;
+  if(blockStartTs === null || focusStartedRemaining === null) return;
 
   const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
   const minutes = Math.round(elapsedSec / 60);
-  if(minutes >= 1) logFocusMinutes(minutes);
+  if(minutes >= 1){
+    logFocusMinutes(minutes);
+  }
 
   blockStartTs = null;
   focusStartedRemaining = null;
@@ -930,7 +983,8 @@ function logPartialFocusIfNeeded(){
 function startTimer(){
   if(timer) return;
 
-  if(!selectedTaskObj()){
+  // Must have task if starting focus
+  if(mode === "focus" && !selectedTaskObj()){
     enforceStartLock();
     return;
   }
@@ -939,7 +993,8 @@ function startTimer(){
   playTick();
   startPetals();
 
-  if(blockStartTs === null){
+  // start tracking real minutes for focus blocks
+  if(mode === "focus" && blockStartTs === null){
     blockStartTs = Date.now();
     focusStartedRemaining = remaining;
   }
@@ -963,13 +1018,14 @@ function startTimer(){
       timer = null;
       lastTick = null;
 
+      // block finished naturally
       if(mode === "focus"){
-        // full block counts as configured focus minutes
-        logFocusMinutes(focusMinutes());
-
-        blockStartTs = null;
-        focusStartedRemaining = null;
-
+        // log full scheduled block if it truly completed
+        // BUT we log actual by: since remaining reached 0, it's basically the full duration
+        // (avoid double count: use partial logger then reset)
+        logPartialFocusIfNeeded();
+        // if user ran full block, partial logger logs focusMinutes() exactly
+        // because elapsedSec ~= focusMinutes()*60
         pomos += 1;
         setMode("break");
       }else{
@@ -988,49 +1044,50 @@ function startTimer(){
 }
 
 function pauseTimer(){
-  if(!timer) return;
   clearInterval(timer);
   timer = null;
   lastTick = null;
 
+  // log partial only if in focus
   logPartialFocusIfNeeded();
+
   stopPetals();
   render();
 }
 
 function stopToBlockStart(){
-  // Stop returns to the start of current block
-  if(timer){
-    clearInterval(timer);
-    timer = null;
-    lastTick = null;
-  }
+  // stop means: stop + reset current block to its start
+  clearInterval(timer);
+  timer = null;
+  lastTick = null;
+
+  // log partial minutes (focus only)
   logPartialFocusIfNeeded();
+
   stopPetals();
+
+  // reset clock of current block
   remaining = total;
   render();
 }
 
-/* =========================
-   Buttons
-========================= */
-btnStart.onclick = startTimer;
-
-btnPause.onclick = () => {
-  unlockAudioOnUserGesture();
-  pauseTimer();
-};
-
-btnStop.onclick = () => {
-  unlockAudioOnUserGesture();
-  stopToBlockStart();
-};
-
-btnSkip.onclick = () => {
+function skipBlock(){
+  // skip: advance block immediately
+  // If skipping focus -> log partial minutes (if any), count pomo completed, go break
+  // If skipping break -> go focus
   unlockAudioOnUserGesture();
 
-  // if currently focusing, log partial minutes (by design)
+  clearInterval(timer);
+  timer = null;
+  lastTick = null;
+  stopPetals();
+
   if(mode === "focus"){
+    if(!selectedTaskObj()){
+      enforceStartLock();
+      render();
+      return;
+    }
     logPartialFocusIfNeeded();
     pomos += 1;
     setMode("break");
@@ -1038,31 +1095,30 @@ btnSkip.onclick = () => {
     setMode("focus");
   }
 
-  // always stop running timer and reset to new block
-  if(timer){
-    clearInterval(timer);
-    timer = null;
-    lastTick = null;
-  }
-  stopPetals();
   render();
-};
+}
+
+/* =========================
+   Buttons
+========================= */
+btnStart.onclick = startTimer;
+btnPause.onclick = () => { unlockAudioOnUserGesture(); pauseTimer(); };
+btnStop.onclick  = () => { unlockAudioOnUserGesture(); stopToBlockStart(); };
+btnSkip.onclick  = skipBlock;
 
 btnReset.onclick = () => {
   unlockAudioOnUserGesture();
-  if(timer){
-    clearInterval(timer);
-    timer = null;
-    lastTick = null;
-  }
+  clearInterval(timer);
+  timer = null;
+  lastTick = null;
+
+  // if resetting focus while running/paused, log partial
+  logPartialFocusIfNeeded();
+
   stopPetals();
-
-  // don't log on reset (pure reset)
-  blockStartTs = null;
-  focusStartedRemaining = null;
-
   pomos = 0;
   setMode("focus");
+  render();
 };
 
 copyBtn.onclick = async () => {
@@ -1094,6 +1150,7 @@ pastToggleEl.onclick = () => {
 
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
 
+    // If not running, update the current block clock
     if(!timer){
       if(mode === "focus"){
         total = focusMinutes() * 60;
@@ -1106,6 +1163,9 @@ pastToggleEl.onclick = () => {
         remaining = total;
         subEl.textContent = `(next focus: ${focusMinutes()}m)`;
       }
+      // reset tracking if user changes config mid-focus while not running
+      blockStartTs = null;
+      focusStartedRemaining = null;
     }
 
     renderWeeklyLog();
@@ -1114,7 +1174,7 @@ pastToggleEl.onclick = () => {
 });
 
 /* =========================
-   Sidebar rendering
+   Sidebar rendering (Left)
 ========================= */
 function renderSidebar(){
   let html = "";
@@ -1161,17 +1221,35 @@ projectsRoot.addEventListener("click", (e) => {
 
   const action = el.getAttribute("data-action");
   const project = el.getAttribute("data-project");
+  const addId = `add-${safeId(project)}`;
 
   if(action === "toggleAdd"){
-    const row = document.getElementById(`add-${safeId(project)}`);
+    document.querySelectorAll(".addrow.show").forEach(r => {
+      if(r.id !== addId) r.classList.remove("show");
+    });
+
+    const row = document.getElementById(addId);
     row.classList.toggle("show");
     const inp = row.querySelector("input");
     setTimeout(()=>inp?.focus?.(), 0);
+
+    if(inp && !inp.__bound){
+      inp.__bound = true;
+      inp.addEventListener("keydown", (ev) => {
+        if(ev.key === "Enter"){
+          row.querySelector('button[data-action="addTask"]')?.click();
+        }
+        if(ev.key === "Escape"){
+          row.classList.remove("show");
+          inp.value = "";
+        }
+      });
+    }
     return;
   }
 
   if(action === "addTask"){
-    const row = document.getElementById(`add-${safeId(project)}`);
+    const row = document.getElementById(addId);
     const inp = row.querySelector("input");
     const name = (inp.value || "").trim();
     if(!name) return;
@@ -1181,6 +1259,7 @@ projectsRoot.addEventListener("click", (e) => {
 
     inp.value = "";
     row.classList.remove("show");
+
     renderSidebar();
     return;
   }
@@ -1198,23 +1277,34 @@ projectsRoot.addEventListener("click", (e) => {
 });
 
 /* =========================
-   Collapse sidebar
+   Collapse sidebars
 ========================= */
-(function initCollapse(){
-  const ui = loadJSON(STORAGE_COLLAPSE, { collapsed:false });
+(function initCollapseLeft(){
+  const ui = loadJSON(STORAGE_UI + "_collapse", { collapsed:false });
   if(ui.collapsed) shell.classList.add("collapsed");
+  if(collapseBtn){
+    collapseBtn.onclick = () => {
+      shell.classList.toggle("collapsed");
+      saveJSON(STORAGE_UI + "_collapse", { collapsed: shell.classList.contains("collapsed") });
+    };
+  }
+})();
 
-  collapseBtn.onclick = () => {
-    shell.classList.toggle("collapsed");
-    saveJSON(STORAGE_COLLAPSE, { collapsed: shell.classList.contains("collapsed") });
-  };
+(function initCollapseRight(){
+  const ui = loadJSON(STORAGE_UI + "_statsCollapse", { collapsed:false });
+  if(ui.collapsed) shell.classList.add("stats-collapsed");
+  if(collapseStatsBtn){
+    collapseStatsBtn.onclick = () => {
+      shell.classList.toggle("stats-collapsed");
+      saveJSON(STORAGE_UI + "_statsCollapse", { collapsed: shell.classList.contains("stats-collapsed") });
+    };
+  }
 })();
 
 /* =========================
-   STATS (Today / Week / Month + Pie / Linear)
+   Stats (Pie only) — Today/Week/Month
 ========================= */
-let statsScope = loadJSON("pomo_stats_scope_v1", "week"); // "today" | "week" | "month"
-let statsView  = loadJSON("pomo_stats_view_v1", "pie");   // "pie" | "bar"
+let statsScope = loadJSON("pomo_stats_scope_v1", "week");
 
 function setActiveBtn(btn, active){
   if(!btn) return;
@@ -1223,7 +1313,6 @@ function setActiveBtn(btn, active){
 
 function sessionsByScope(scope){
   const now = new Date();
-
   if(scope === "today"){
     const dk = dayKey(now);
     return sessions.filter(s => (s.dayKey || dayKey(new Date(s.ts))) === dk);
@@ -1232,7 +1321,6 @@ function sessionsByScope(scope){
     const mk = monthKey(now);
     return sessions.filter(s => (s.monthKey || monthKey(new Date(s.ts))) === mk);
   }
-  // week
   const wk = weekKey(now);
   return sessions.filter(s => s.weekKey === wk);
 }
@@ -1252,14 +1340,12 @@ function sumTotals(totals){
 }
 
 function toPieConic(totals){
-  // returns conic-gradient string
   const entries = Object.entries(totals).filter(([,v])=>v>0);
   if(entries.length === 0) return "conic-gradient(rgba(168,85,247,.18) 0 360deg)";
 
   const sum = entries.reduce((a,[,v])=>a+v,0);
   let acc = 0;
-  const stops = [];
-  // use 2 theme purples + soft variants
+
   const palette = [
     "rgba(168,85,247,.92)",
     "rgba(192,132,252,.90)",
@@ -1268,16 +1354,20 @@ function toPieConic(totals){
     "rgba(168,85,247,.30)",
     "rgba(192,132,252,.30)"
   ];
-  entries.forEach(([k,v], i) => {
+
+  const stops = [];
+  entries.forEach(([,v], i) => {
     const a0 = acc;
     acc += (v/sum) * 360;
     const color = palette[i % palette.length];
     stops.push(`${color} ${a0}deg ${acc}deg`);
   });
+
   return `conic-gradient(${stops.join(",")})`;
 }
 
 function renderStatsLegend(totals){
+  if(!statsLegend) return;
   const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
   if(entries.length === 0){
     statsLegend.innerHTML = `<div class="mini">No minutes yet for this range.</div>`;
@@ -1295,68 +1385,24 @@ function renderStatsLegend(totals){
   statsLegend.innerHTML = html;
 }
 
-function renderPie(totals){
-  const total = sumTotals(totals);
-  statsTotal.textContent = String(total);
-  statsChart.classList.remove("bar");
+function renderStats(){
+  if(!statsChart) return;
 
+  const slist = sessionsByScope(statsScope);
+  const totals = totalsByProject(slist);
+  const total = sumTotals(totals);
+
+  statsChart.innerHTML = `<span id="statsTotal">${total}</span>`;
   statsChart.style.background = toPieConic(totals);
 
   const label = (statsScope === "today") ? "Today" : (statsScope === "month") ? "This month" : "This week";
-  statsSubtitle.textContent = `${label} • Minutes by project`;
+  if(statsSubtitle) statsSubtitle.textContent = `${label} • Minutes by project`;
+
   renderStatsLegend(totals);
-}
-
-function renderBars(totals){
-  const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-  const total = sumTotals(totals);
-  statsTotal.textContent = String(total);
-
-  statsChart.classList.add("bar");
-  statsChart.style.background = "rgba(255,255,255,.9)";
-
-  // build inner bars
-  let inner = `<div class="barwrap">`;
-  const max = Math.max(...entries.map(([,v])=>v), 1);
-  for(const [name, mins] of entries){
-    const w = Math.round((mins/max)*100);
-    inner += `<div class="barrow">
-      <div class="barlabel">${name}</div>
-      <div class="bartrack"><div class="barfill" style="width:${w}%"></div></div>
-      <div class="barmins">${mins}m</div>
-    </div>`;
-  }
-  inner += `</div>`;
-
-  statsChart.innerHTML = inner;
-
-  const label = (statsScope === "today") ? "Today" : (statsScope === "month") ? "This month" : "This week";
-  statsSubtitle.textContent = `${label} • Linear compare`;
-  renderStatsLegend(totals);
-}
-
-function renderStats(){
-  if(!statsChart) return;
-  const slist = sessionsByScope(statsScope);
-  const totals = totalsByProject(slist);
-
-  // reset chart inner (for pie we want center number)
-  if(statsView === "pie"){
-    statsChart.innerHTML = `<span id="statsTotal">${sumTotals(totals)}</span>`;
-    // rebind because we replaced it
-    const newTotal = statsChart.querySelector("#statsTotal");
-    if(newTotal) newTotal.textContent = String(sumTotals(totals));
-    // keep pointer
-    renderPie(totals);
-  }else{
-    renderBars(totals);
-  }
 
   setActiveBtn(tabToday, statsScope === "today");
   setActiveBtn(tabWeek,  statsScope === "week");
   setActiveBtn(tabMonth, statsScope === "month");
-  setActiveBtn(viewPie,  statsView === "pie");
-  setActiveBtn(viewBar,  statsView === "bar");
 }
 
 function setScope(scope){
@@ -1364,17 +1410,10 @@ function setScope(scope){
   saveJSON("pomo_stats_scope_v1", statsScope);
   renderStats();
 }
-function setView(view){
-  statsView = view;
-  saveJSON("pomo_stats_view_v1", statsView);
-  renderStats();
-}
 
 tabToday?.addEventListener("click", ()=>setScope("today"));
 tabWeek?.addEventListener("click", ()=>setScope("week"));
 tabMonth?.addEventListener("click", ()=>setScope("month"));
-viewPie?.addEventListener("click", ()=>setView("pie"));
-viewBar?.addEventListener("click", ()=>setView("bar"));
 
 /* =========================
    Init
@@ -1384,8 +1423,8 @@ updateSelectedLabels();
 
 setMode("focus");
 renderWeeklyLog();
-render();
 renderStats();
+render();
 </script>
 </body>
 </html>
