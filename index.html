@@ -1,659 +1,333 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Notion Pomodoro</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      /* Light base */
-      --bg:#fbfaf7;
-      --panel:#ffffff;
-      --text:#2b2b2b;
-      --muted:#6f6f78;
+<meta charset="UTF-8">
+<title>Notion Pomodoro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-      /* Purple accents */
-      --accent:#a855f7;
-      --accent2:#7c3aed;
+<style>
+:root{
+  --bg:#FBF8FF;
+  --accent:#A855F7;
+  --accent2:#C084FC;
 
-      /* Ring */
-      --ringTrack: rgba(60, 36, 92, .12);
-      --glow: rgba(168,85,247,.14);
+  --petal:#FFC7F8;
+  --center:#9D7BEA; /* centro suave, no oscuro */
 
-      /* Daisy */
-      --daisy:#FFC7F8;         /* petals */
-      --daisyCenter:#6D28D9;   /* darker purple center */
+  --ringTrack:rgba(168,85,247,.18);
+}
 
-      /* Congrats tint */
-      --good: rgba(34,197,94,.12);
-      --goodBorder: rgba(34,197,94,.26);
-    }
+*{box-sizing:border-box}
 
-    *{box-sizing:border-box}
+html,body{
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+}
 
-    html, body { overflow: hidden; }
+body{
+  background:
+    radial-gradient(800px 500px at 20% 20%, rgba(168,85,247,.28), transparent 60%),
+    radial-gradient(900px 600px at 80% 30%, rgba(192,132,252,.25), transparent 65%),
+    linear-gradient(180deg, rgba(168,85,247,.08), transparent 50%),
+    var(--bg);
+  display:grid;
+  place-items:center;
+}
 
-    body{
-      margin:0;
-      background:
-        radial-gradient(1100px 700px at 18% 18%, rgba(168,85,247,.34), transparent 56%),
-        radial-gradient(1000px 720px at 82% 26%, rgba(124,58,237,.26), transparent 62%),
-        radial-gradient(1200px 820px at 55% 92%, rgba(168,85,247,.22), transparent 62%),
-        linear-gradient(180deg, rgba(168,85,247,.10), transparent 45%),
-        var(--bg);
-      color:var(--text);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      display:grid;
-      place-items:center;
-      height:100vh;
-      overflow:hidden;
-    }
+/* ===== BACKGROUND FLOWERS ===== */
+.daisy-layer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+}
 
-    /* ===== Layers ===== */
-    .daisy-layer{
-      position: fixed;
-      inset: -180px;      /* IMPORTANT: prevents edge clipping */
-      pointer-events:none;
-      z-index:0;
-      overflow: visible;
-    }
+.daisy{
+  position:absolute;
+  width:90px;
+  height:90px;
+  opacity:.45;
+  filter: drop-shadow(0 10px 20px rgba(168,85,247,.15));
+}
 
-    .petal-layer{
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2; /* above daisies, below app */
-      overflow: hidden;
-    }
+.daisy .petals{ fill:var(--petal); }
+.daisy .center{ fill:var(--center); }
 
-    .app{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:22px;
-      padding:24px;
-      width:min(920px, 100%);
-      position:relative;
-      z-index:3;
-    }
+.d1{top:40px;left:60px}
+.d2{top:140px;right:120px}
+.d3{top:260px;left:180px;opacity:.35}
+.d4{bottom:200px;right:90px}
+.d5{bottom:120px;left:140px}
+.d6{bottom:60px;right:220px;opacity:.3}
 
-    /* ===== Top UI ===== */
-    .topline{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      width:min(720px, 100%);
-      gap:12px;
-      flex-wrap:wrap;
-    }
+@keyframes float{
+  0%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+  100%{transform:translateY(0)}
+}
 
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 14px;
-      border-radius:14px;
-      background:rgba(255,255,255,.86);
-      border:1px solid rgba(40, 30, 60, .10);
-      backdrop-filter: blur(10px);
-      color:var(--muted);
-      font-size:13px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.06);
-    }
+body.running .daisy{
+  animation:float 5s ease-in-out infinite;
+}
 
-    .badge{
-      width:10px;height:10px;border-radius:50%;
-      background:linear-gradient(135deg,var(--accent),var(--accent2));
-      box-shadow:0 0 0 6px var(--glow);
-    }
+/* ===== PETALS ===== */
+.petal-layer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+}
 
-    .pill strong{ color: var(--text); font-weight:650; }
+.petal{
+  position:absolute;
+  top:-60px;
+  width:26px;
+  height:18px;
+  background:var(--petal);
+  border-radius:999px;
+  opacity:.85;
+  filter: drop-shadow(0 10px 20px rgba(168,85,247,.2));
+  animation:
+    fall var(--dur) linear forwards,
+    sway var(--sway) ease-in-out infinite;
+}
 
-    .goalWrap{
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
+.petal::after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  background:rgba(255,255,255,.25);
+  border-radius:999px;
+}
 
-    .goalInput{
-      width:70px;
-      padding:8px 10px;
-      border-radius:12px;
-      background:rgba(255,255,255,.92);
-      border:1px solid rgba(40, 30, 60, .12);
-      color:var(--text);
-      outline:none;
-      font-size:13px;
-      text-align:center;
-      box-shadow: 0 10px 28px rgba(0,0,0,.05);
-    }
+@keyframes fall{
+  to{
+    transform:translate3d(var(--dx),110vh,0) rotate(var(--rot));
+    opacity:0;
+  }
+}
 
-    /* ===== Ring ===== */
-    .ring{
-      width:360px;
-      height:360px;
-      border-radius:50%;
-      background:
-        conic-gradient(var(--accent) calc(var(--progress) * 1turn), var(--ringTrack) 0);
-      display:grid;
-      place-items:center;
-      box-shadow: 0 0 0 14px var(--glow) inset;
-      transition: background 200ms linear, box-shadow 200ms ease;
-    }
+@keyframes sway{
+  50%{margin-left:14px}
+}
 
-    .inner{
-      width:300px;
-      height:300px;
-      border-radius:50%;
-      background:rgba(255,255,255,.94);
-      border:1px solid rgba(40, 30, 60, .10);
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      box-shadow: 0 30px 70px rgba(0,0,0,.10);
-      backdrop-filter: blur(10px);
-      position:relative;
-    }
+/* ===== APP ===== */
+.app{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:20px;
+}
 
-    .time{
-      font-size:74px;
-      font-weight:780;
-      letter-spacing:.5px;
-      line-height:1;
-      color:#2a2a2a;
-    }
+.top{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
 
-    .sub{
-      margin-top:10px;
-      color:var(--muted);
-      font-size:14px;
-    }
+.pill{
+  background:rgba(255,255,255,.9);
+  border-radius:14px;
+  padding:10px 14px;
+  font-size:13px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
 
-    /* ===== Controls ===== */
-    .controls{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-      justify-content:center;
-    }
+.goal input{
+  width:50px;
+  border:none;
+  background:rgba(0,0,0,.05);
+  border-radius:8px;
+  padding:4px;
+  text-align:center;
+}
 
-    button{
-      background:rgba(255,255,255,.90);
-      border:1px solid rgba(40, 30, 60, .12);
-      color:var(--text);
-      padding:10px 16px;
-      border-radius:14px;
-      cursor:pointer;
-      font-size:14px;
-      min-width:92px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 12px 38px rgba(0,0,0,.05);
-      transition: transform .06s ease, opacity .2s ease;
-    }
-    button:active{ transform: translateY(1px); }
-    button:hover{ opacity:.92; }
+.ring{
+  width:320px;
+  height:320px;
+  border-radius:50%;
+  background:
+    conic-gradient(var(--accent) calc(var(--progress)*1turn), var(--ringTrack) 0);
+  display:grid;
+  place-items:center;
+}
 
-    button.primary{
-      background:linear-gradient(135deg,var(--accent),var(--accent2));
-      border:none;
-      color:#fff;
-      box-shadow:0 14px 34px rgba(124,58,237,.18);
-    }
+.inner{
+  width:260px;
+  height:260px;
+  border-radius:50%;
+  background:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 20px 50px rgba(0,0,0,.1);
+}
 
-    .hint{
-      color:var(--muted);
-      font-size:12px;
-      margin-top:4px;
-      opacity:.9;
-      text-align:center;
-    }
+.time{
+  font-size:64px;
+  font-weight:800;
+}
 
-    /* ===== Toast ===== */
-    .toast{
-      position:fixed;
-      top:18px;
-      left:50%;
-      transform:translateX(-50%);
-      padding:12px 14px;
-      border-radius:14px;
-      background:rgba(255,255,255,.90);
-      border:1px solid rgba(40, 30, 60, .12);
-      color:var(--text);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 20px 60px rgba(0,0,0,.10);
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .25s ease, transform .25s ease;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      z-index:9999;
-      max-width:min(520px, calc(100vw - 24px));
-    }
-    .toast.show{
-      opacity:1;
-      transform:translateX(-50%) translateY(6px);
-    }
-    .toast.good{
-      border-color: var(--goodBorder);
-      background: linear-gradient(0deg, var(--good), rgba(255,255,255,.90));
-    }
-    .toast .dot{
-      width:10px;height:10px;border-radius:50%;
-      background:rgba(34,197,94,.9);
-      box-shadow:0 0 0 6px rgba(34,197,94,.15);
-    }
+.sub{
+  font-size:13px;
+  opacity:.6;
+}
 
-    /* ===== Daisy SVGs (icon style) ===== */
-    .daisy{
-      position:absolute;
-      width:360px;
-      height:360px;
-      opacity:.80;
-      transform-origin: 50% 50%;
-      filter: drop-shadow(0 24px 44px rgba(168,85,247,.20));
-    }
-    .daisy g{ fill: var(--daisy); }
-    .daisy .center{ fill: var(--daisyCenter); }
+.controls{
+  display:flex;
+  gap:10px;
+}
 
-    /* positions (big + visible) */
-    .d1{ top: 10px; left: 10px; transform: rotate(-10deg); }
-    .d2{ bottom: -10px; right: -10px; transform: rotate(16deg); width: 420px; height: 420px; opacity:.74; }
-    .d3{ top: 120px; right: 30px; transform: rotate(6deg); width: 260px; height: 260px; opacity:.55; }
-    .d4{ bottom: 120px; left: 40px; transform: rotate(-6deg); width: 280px; height: 280px; opacity:.50; }
+button{
+  padding:10px 16px;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  background:white;
+  box-shadow:0 10px 30px rgba(0,0,0,.1);
+}
 
-    @keyframes daisyFloat {
-      0%   { transform: translateY(0) rotate(var(--r)); }
-      50%  { transform: translateY(-14px) rotate(calc(var(--r) + 4deg)); }
-      100% { transform: translateY(0) rotate(var(--r)); }
-    }
-    @keyframes daisyPulse {
-      0%   { transform: scale(1); }
-      50%  { transform: scale(1.04); }
-      100% { transform: scale(1); }
-    }
-
-    body.running .d1{ --r:-10deg; animation: daisyFloat 4.2s ease-in-out infinite; }
-    body.running .d2{ --r:16deg;  animation: daisyFloat 5.1s ease-in-out infinite; }
-    body.running .d3{ --r:6deg;   animation: daisyFloat 4.6s ease-in-out infinite; }
-    body.running .d4{ --r:-6deg;  animation: daisyFloat 5.4s ease-in-out infinite; }
-
-    body.running .daisy{
-      /* add subtle pulse while running */
-      animation-name: daisyFloat, daisyPulse;
-      animation-duration: 5s, 2.4s;
-      animation-iteration-count: infinite;
-      animation-timing-function: ease-in-out;
-    }
-
-    /* ===== Falling petals burst ===== */
-    .petal{
-      position: absolute;
-      top: -50px;
-      width: 20px;
-      height: 14px;
-      background: var(--daisy);
-      border-radius: 999px;
-      opacity: .95;
-      filter: drop-shadow(0 12px 22px rgba(168,85,247,.18));
-      animation: fall var(--dur) linear forwards, sway var(--sway) ease-in-out infinite;
-      will-change: transform, opacity;
-    }
-    .petal::after{
-      content:"";
-      position:absolute;
-      inset: 2px;
-      background: rgba(255,255,255,.25);
-      border-radius: 999px;
-    }
-
-    @keyframes fall{
-      to{
-        transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
-        opacity: 0;
-      }
-    }
-    @keyframes sway{
-      0%,100%{ margin-left: 0; }
-      50%{ margin-left: 14px; }
-    }
-
-    @media (max-width: 460px){
-      .ring{ width:320px; height:320px; }
-      .inner{ width:270px; height:270px; }
-      .time{ font-size:64px; }
-    }
-  </style>
+.primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+}
+</style>
 </head>
 
 <body>
-  <!-- Daisy layer -->
-  <div class="daisy-layer" aria-hidden="true">
-    <!-- Daisy SVG: icon-like 5 petals + center -->
-    <svg class="daisy d1" viewBox="0 0 120 120">
-      <g>
-        <ellipse cx="60" cy="22" rx="22" ry="32"/>
-        <ellipse cx="98" cy="60" rx="32" ry="22"/>
-        <ellipse cx="60" cy="98" rx="22" ry="32"/>
-        <ellipse cx="22" cy="60" rx="32" ry="22"/>
-        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-        <circle cx="60" cy="60" r="20" class="center"/>
-      </g>
-    </svg>
 
-    <svg class="daisy d2" viewBox="0 0 120 120">
-      <g>
-        <ellipse cx="60" cy="22" rx="22" ry="32"/>
-        <ellipse cx="98" cy="60" rx="32" ry="22"/>
-        <ellipse cx="60" cy="98" rx="22" ry="32"/>
-        <ellipse cx="22" cy="60" rx="32" ry="22"/>
-        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-        <circle cx="60" cy="60" r="18" class="center"/>
-      </g>
-    </svg>
+<!-- FLOWERS -->
+<div class="daisy-layer">
+  <svg class="daisy d1" viewBox="0 0 100 100">
+    <g class="petals">
+      <ellipse cx="50" cy="15" rx="20" ry="30"/>
+      <ellipse cx="85" cy="50" rx="30" ry="20"/>
+      <ellipse cx="50" cy="85" rx="20" ry="30"/>
+      <ellipse cx="15" cy="50" rx="30" ry="20"/>
+    </g>
+    <circle cx="50" cy="50" r="16" class="center"/>
+  </svg>
+  <svg class="daisy d2" viewBox="0 0 100 100"><use href="#"/></svg>
+  <svg class="daisy d3" viewBox="0 0 100 100"><use href="#"/></svg>
+  <svg class="daisy d4" viewBox="0 0 100 100"><use href="#"/></svg>
+  <svg class="daisy d5" viewBox="0 0 100 100"><use href="#"/></svg>
+  <svg class="daisy d6" viewBox="0 0 100 100"><use href="#"/></svg>
+</div>
 
-    <svg class="daisy d3" viewBox="0 0 120 120">
-      <g>
-        <ellipse cx="60" cy="22" rx="22" ry="32"/>
-        <ellipse cx="98" cy="60" rx="32" ry="22"/>
-        <ellipse cx="60" cy="98" rx="22" ry="32"/>
-        <ellipse cx="22" cy="60" rx="32" ry="22"/>
-        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-        <circle cx="60" cy="60" r="16" class="center"/>
-      </g>
-    </svg>
+<div class="petal-layer" id="petalLayer"></div>
 
-    <svg class="daisy d4" viewBox="0 0 120 120">
-      <g>
-        <ellipse cx="60" cy="22" rx="22" ry="32"/>
-        <ellipse cx="98" cy="60" rx="32" ry="22"/>
-        <ellipse cx="60" cy="98" rx="22" ry="32"/>
-        <ellipse cx="22" cy="60" rx="32" ry="22"/>
-        <ellipse cx="85" cy="85" rx="26" ry="30" transform="rotate(45 85 85)"/>
-        <circle cx="60" cy="60" r="16" class="center"/>
-      </g>
-    </svg>
+<!-- APP -->
+<div class="app">
+  <div class="top">
+    <div class="pill">Focus 35 / 10 (long 30 every 5)</div>
+    <div class="pill goal">Goal <input id="goal" type="number" value="8"> pomos</div>
+    <div class="pill" id="count">Pomodoros: 0 / 8</div>
   </div>
 
-  <!-- Petals layer -->
-  <div class="petal-layer" aria-hidden="true" id="petalLayer"></div>
-
-  <!-- Congrats toast -->
-  <div class="toast" id="toast">
-    <span class="dot"></span>
-    <span id="toastText">Congrats!</span>
-  </div>
-
-  <!-- App -->
-  <div class="app">
-    <div class="topline">
-      <div class="pill">
-        <span class="badge"></span>
-        <span id="modeLabel">Focus</span>
-        <span id="planLabel">35 / 10 (long 30 every 5)</span>
-      </div>
-
-      <div class="pill goalWrap">
-        <span>Daily goal</span>
-        <input class="goalInput" id="goalInput" type="number" min="1" max="30" step="1" />
-        <span style="opacity:.9">pomos</span>
-      </div>
-
-      <div class="pill">
-        <span id="countLabel">Pomodoros: 0</span>
-      </div>
-    </div>
-
-    <div class="ring" id="ring" style="--progress:0">
-      <div class="inner">
-        <div class="time" id="time">35:00</div>
-        <div class="sub" id="sub">(next break: 10m)</div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <button class="primary" id="startPause">Start</button>
-      <button id="stop">Stop</button>
-      <button id="skip">Skip</button>
-      <button id="reset">Reset</button>
-    </div>
-
-    <div class="hint">
-      Start/Pause mantiene el tiempo. Stop detiene y vuelve al inicio del bloque actual.
+  <div class="ring" id="ring">
+    <div class="inner">
+      <div class="time" id="time">35:00</div>
+      <div class="sub">(next break: 10m)</div>
     </div>
   </div>
 
-  <script>
-    // === Config ===
-    const FOCUS_MIN = 35;
-    const SHORT_BREAK_MIN = 10;
-    const LONG_BREAK_MIN = 30;
-    const LONG_EVERY = 5; // cada 5 pomodoros
+  <div class="controls">
+    <button class="primary" id="start">Start</button>
+    <button id="stop">Stop</button>
+    <button id="reset">Reset</button>
+  </div>
+</div>
 
-    // Goal persistence (simple): localStorage
-    const GOAL_KEY = "pomo_daily_goal";
-    const GOAL_CONGRATS_KEY = "pomo_goal_congrats_shown"; // until Reset
+<script>
+/* ===== TIMER ===== */
+let total = 35*60;
+let remaining = total;
+let timer = null;
+let pomos = 0;
 
-    // === State ===
-    let mode = "focus"; // "focus" | "break"
-    let pomoCount = 0;  // focus blocks terminados
-    let total = FOCUS_MIN * 60;
-    let remaining = total;
-    let timer = null;
-    let lastTick = null;
+const timeEl = document.getElementById("time");
+const ring = document.getElementById("ring");
+const count = document.getElementById("count");
+const goalInput = document.getElementById("goal");
 
-    // === Elements ===
-    const timeEl = document.getElementById("time");
-    const ringEl = document.getElementById("ring");
-    const modeLabel = document.getElementById("modeLabel");
-    const countLabel = document.getElementById("countLabel");
-    const subEl = document.getElementById("sub");
-    const startPauseBtn = document.getElementById("startPause");
-    const goalInput = document.getElementById("goalInput");
-    const toast = document.getElementById("toast");
-    const toastText = document.getElementById("toastText");
+/* ===== PETALS ===== */
+let petalInterval=null;
 
-    function setRunning(isRunning){
-      document.body.classList.toggle("running", !!isRunning);
-    }
+function spawnPetal(){
+  const layer=document.getElementById("petalLayer");
+  const p=document.createElement("div");
+  p.className="petal";
+  p.style.left=Math.random()*innerWidth+"px";
+  p.style.setProperty("--dx",(Math.random()*200-100)+"px");
+  p.style.setProperty("--rot",(Math.random()*720-360)+"deg");
+  p.style.setProperty("--dur",(Math.random()*2+4)+"s");
+  p.style.setProperty("--sway",(Math.random()*1+1)+"s");
+  layer.appendChild(p);
+  setTimeout(()=>p.remove(),9000);
+}
 
-    function fmt(sec){
-      const m = Math.floor(sec / 60).toString().padStart(2,"0");
-      const s = Math.floor(sec % 60).toString().padStart(2,"0");
-      return `${m}:${s}`;
-    }
+function startPetals(){
+  if(petalInterval) return;
+  petalInterval=setInterval(spawnPetal,400);
+}
 
-    function getNextBreakMinutes(nextPomoCount){
-      return (nextPomoCount % LONG_EVERY === 0) ? LONG_BREAK_MIN : SHORT_BREAK_MIN;
-    }
+function stopPetals(){
+  clearInterval(petalInterval);
+  petalInterval=null;
+}
 
-    function currentGoal(){
-      const g = Number(goalInput.value || 0);
-      return (Number.isFinite(g) && g > 0) ? g : 8;
-    }
+/* ===== CONTROLS ===== */
+function render(){
+  const m=Math.floor(remaining/60).toString().padStart(2,"0");
+  const s=(remaining%60).toString().padStart(2,"0");
+  timeEl.textContent=`${m}:${s}`;
+  ring.style.setProperty("--progress",1-remaining/total);
+  count.textContent=`Pomodoros: ${pomos} / ${goalInput.value}`;
+}
 
-    function showToast(message){
-      toastText.textContent = message;
-      toast.classList.add("show","good");
-      clearTimeout(showToast._t);
-      showToast._t = setTimeout(() => {
-        toast.classList.remove("show");
-      }, 3200);
-    }
-
-    function maybeCongrats(){
-      const goal = currentGoal();
-      if(pomoCount >= goal){
-        const already = localStorage.getItem(GOAL_CONGRATS_KEY) === "1";
-        if(!already){
-          localStorage.setItem(GOAL_CONGRATS_KEY, "1");
-          showToast(`Congrats! 🎉 Goal reached: ${pomoCount}/${goal}`);
-          ringEl.style.boxShadow = "0 0 0 14px rgba(34,197,94,.16) inset";
-        }
-      }
-    }
-
-    // Petals burst on play
-    function launchPetalsBurst(count = 22){
-      const petalLayer = document.getElementById("petalLayer");
-      if(!petalLayer) return;
-
-      for(let i=0; i<count; i++){
-        const p = document.createElement("div");
-        p.className = "petal";
-
-        // random start position
-        const x = Math.random() * window.innerWidth;
-        p.style.left = `${x}px`;
-
-        // random drift and rotation
-        const dx = (Math.random() * 160 - 80);     // -80..80
-        const rot = (Math.random() * 720 - 360);   // -360..360
-
-        // random duration/sway
-        const dur = (Math.random() * 1.8 + 2.8).toFixed(2) + "s";  // 2.8–4.6s
-        const sway = (Math.random() * 1.0 + 0.9).toFixed(2) + "s"; // 0.9–1.9s
-
-        // random size
-        const scale = (Math.random() * 0.9 + 0.7).toFixed(2); // 0.7–1.6
-
-        p.style.setProperty("--dx", `${dx}px`);
-        p.style.setProperty("--rot", `${rot}deg`);
-        p.style.setProperty("--dur", dur);
-        p.style.setProperty("--sway", sway);
-        p.style.transform = `scale(${scale})`;
-
-        petalLayer.appendChild(p);
-        setTimeout(() => p.remove(), 5200);
-      }
-    }
-
-    function setMode(newMode){
-      mode = newMode;
-
-      if(mode === "focus"){
-        total = FOCUS_MIN * 60;
-        remaining = total;
-        modeLabel.textContent = "Focus";
-        subEl.textContent = `(next break: ${getNextBreakMinutes(pomoCount + 1)}m)`;
-      }else{
-        const mins = (pomoCount % LONG_EVERY === 0 && pomoCount !== 0) ? LONG_BREAK_MIN : SHORT_BREAK_MIN;
-        total = mins * 60;
-        remaining = total;
-        modeLabel.textContent = mins === LONG_BREAK_MIN ? "Long Break" : "Break";
-        subEl.textContent = `(next focus: ${FOCUS_MIN}m)`;
-      }
-      render();
-    }
-
-    function render(){
-      timeEl.textContent = fmt(remaining);
-      const progress = 1 - (remaining / total);
-      ringEl.style.setProperty("--progress", isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0);
-      countLabel.innerHTML = `Pomodoros: <strong>${pomoCount}</strong> / <strong>${currentGoal()}</strong>`;
-      startPauseBtn.textContent = timer ? "Pause" : "Start";
-    }
-
-    function stopTimer(){
+document.getElementById("start").onclick=()=>{
+  if(timer) return;
+  document.body.classList.add("running");
+  startPetals();
+  timer=setInterval(()=>{
+    remaining--;
+    if(remaining<=0){
       clearInterval(timer);
-      timer = null;
-      lastTick = null;
-      setRunning(false);
-      render();
+      timer=null;
+      pomos++;
+      remaining=total;
+      stopPetals();
+      document.body.classList.remove("running");
     }
-
-    function startTimer(){
-      if(timer) return;
-
-      setRunning(true);
-      launchPetalsBurst(26);
-
-      // delta-time so it doesn't drift
-      lastTick = Date.now();
-      timer = setInterval(() => {
-        const now = Date.now();
-        const delta = Math.floor((now - lastTick) / 1000);
-        if(delta >= 1){
-          remaining -= delta;
-          lastTick += delta * 1000;
-        }
-
-        if(remaining <= 0){
-          remaining = 0;
-          render();
-          stopTimer();
-
-          if(mode === "focus"){
-            pomoCount += 1;
-            maybeCongrats();
-            setMode("break");
-          }else{
-            setMode("focus");
-          }
-          return;
-        }
-
-        render();
-      }, 250);
-
-      render();
-    }
-
-    // === Buttons ===
-    document.getElementById("startPause").onclick = () => {
-      if(timer) stopTimer();
-      else startTimer();
-    };
-
-    // Stop: detiene y vuelve al inicio del bloque actual
-    document.getElementById("stop").onclick = () => {
-      stopTimer();
-      remaining = total;
-      render();
-    };
-
-    // Skip: pasa al siguiente bloque (cuenta foco como terminado si lo saltas)
-    document.getElementById("skip").onclick = () => {
-      stopTimer();
-      if(mode === "focus"){
-        pomoCount += 1;
-        maybeCongrats();
-        setMode("break");
-      }else{
-        setMode("focus");
-      }
-    };
-
-    // Reset: vuelve TODO a 0 pomos y focus 35:00
-    document.getElementById("reset").onclick = () => {
-      stopTimer();
-      pomoCount = 0;
-      localStorage.removeItem(GOAL_CONGRATS_KEY);
-      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.14) inset";
-      setMode("focus");
-    };
-
-    // === Goal input persistence ===
-    function loadGoal(){
-      const stored = Number(localStorage.getItem(GOAL_KEY));
-      const goal = (Number.isFinite(stored) && stored > 0) ? stored : 8;
-      goalInput.value = goal;
-    }
-    goalInput.addEventListener("change", () => {
-      const g = Math.max(1, Math.min(30, Number(goalInput.value || 8)));
-      goalInput.value = g;
-      localStorage.setItem(GOAL_KEY, String(g));
-      localStorage.removeItem(GOAL_CONGRATS_KEY);
-      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.14) inset";
-      render();
-    });
-
-    // init
-    loadGoal();
-    setMode("focus");
     render();
-  </script>
+  },1000);
+};
+
+document.getElementById("stop").onclick=()=>{
+  clearInterval(timer);
+  timer=null;
+  stopPetals();
+  document.body.classList.remove("running");
+};
+
+document.getElementById("reset").onclick=()=>{
+  clearInterval(timer);
+  timer=null;
+  remaining=total;
+  pomos=0;
+  stopPetals();
+  document.body.classList.remove("running");
+  render();
+};
+
+render();
+</script>
+
 </body>
 </html>
