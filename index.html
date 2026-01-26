@@ -1,10 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8" />
-<title>Notion Pomodoro</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-
 <style>
 :root{
   --bg:#FBF8FF;
@@ -13,274 +6,109 @@
   --accent2:#C084FC;
   --ringTrack:rgba(168,85,247,.18);
 
-  --petal:#FFC7F8;
-
   --panelBg: rgba(255,255,255,.86);
   --panelBorder: rgba(168,85,247,.16);
-  --text: #1f1f1f;
-  --muted: rgba(0,0,0,.55);
+
+  --text:#1f1f1f;
+  --muted:rgba(0,0,0,.55);
 }
 
-*{box-sizing:border-box}
+/* ===== Reset ===== */
+*{ box-sizing:border-box; }
 
 html,body{
   margin:0;
   height:100%;
-  overflow:hidden;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--text);
+  color:var(--text);
 }
 
+/* ===== Background ===== */
 body{
   background:
     radial-gradient(900px 560px at 20% 22%, rgba(168,85,247,.30), transparent 62%),
     radial-gradient(980px 640px at 80% 30%, rgba(192,132,252,.26), transparent 66%),
     linear-gradient(180deg, rgba(168,85,247,.10), transparent 52%),
     var(--bg);
-}
-
-/* ===== Petals layer ===== */
-.petal-layer{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:1;
   overflow:hidden;
 }
-.petal{
-  position:absolute;
-  top:-70px;
-  width:34px;
-  height:22px;
-  background:var(--petal);
-  border-radius:999px;
-  opacity:.95;
-  filter: drop-shadow(0 14px 26px rgba(168,85,247,.30));
-  animation:
-    fall var(--dur) linear forwards,
-    sway var(--sway) ease-in-out infinite;
-  will-change: transform, opacity;
-}
-.petal::after{
-  content:"";
-  position:absolute;
-  inset:4px;
-  background:rgba(255,255,255,.28);
-  border-radius:999px;
-}
-@keyframes fall{
-  to{
-    transform: translate3d(var(--dx), 110vh, 0) rotate(var(--rot));
-    opacity:0;
-  }
-}
-@keyframes sway{
-  0%,100%{ margin-left: 0; }
-  50%{ margin-left: 18px; }
-}
 
-/* ===== Layout ===== */
+/* ===== Layout shell ===== */
 .shell{
-  position:relative;
-  z-index:2;
   height:100%;
   display:grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 320px 1fr 300px;
 }
 
+/* ===== Left Sidebar ===== */
 .sidebar{
-  height:100%;
   padding:14px;
-  border-right: 1px solid var(--panelBorder);
-  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
+  border-right:1px solid var(--panelBorder);
+  background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
   backdrop-filter: blur(10px);
   overflow:auto;
 }
 
-.shell.collapsed{
-  grid-template-columns: 68px 1fr;
-}
-.shell.collapsed .sidebar-inner{
-  display:none;
-}
-.shell.collapsed .sidebar{
-  padding:14px 10px;
-}
-
+/* ===== Main ===== */
 .main{
-  height:100%;
   overflow:auto;
+  padding:20px;
   display:grid;
   place-items:center;
-  padding:18px;
 }
 
-/* ===== Panels / Pills ===== */
+/* ===== Right Stats ===== */
+.stats{
+  padding:16px;
+  border-left:1px solid var(--panelBorder);
+  background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.55));
+  backdrop-filter: blur(10px);
+  overflow:auto;
+}
+
+/* ===== Panels ===== */
 .panel{
-  background: var(--panelBg);
-  border: 1px solid var(--panelBorder);
+  background:var(--panelBg);
+  border:1px solid var(--panelBorder);
   border-radius:18px;
   box-shadow:0 12px 34px rgba(0,0,0,.08);
-  backdrop-filter: blur(10px);
 }
 
+/* ===== Pills ===== */
 .pill{
-  background:rgba(255,255,255,.90);
+  background:rgba(255,255,255,.92);
   border:1px solid rgba(168,85,247,.16);
   border-radius:14px;
   padding:10px 14px;
   font-size:13px;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
+  font-weight:700;
   display:flex;
   align-items:center;
   gap:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
 }
 
 .pill input{
   width:64px;
   border:none;
   outline:none;
-  background:rgba(168,85,247,.10);
+  background:rgba(168,85,247,.12);
   border-radius:10px;
   padding:6px 8px;
   text-align:center;
-  font-weight:700;
-  color:#2b2b2b;
-}
-.pill input.small{ width:54px; }
-.pill input:disabled{ opacity:.55; cursor:not-allowed; }
-
-/* ===== Sidebar UI ===== */
-.sb-top{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:12px;
-}
-
-.sb-title{
-  font-weight:900;
-  font-size:14px;
-  letter-spacing:.2px;
-}
-
-.iconbtn{
-  width:38px; height:38px;
-  border-radius:12px;
-  border:1px solid var(--panelBorder);
-  background: rgba(255,255,255,.85);
-  box-shadow:0 10px 26px rgba(0,0,0,.08);
-  cursor:pointer;
-  display:grid;
-  place-items:center;
-  font-weight:900;
-}
-
-.project{
-  border:1px solid rgba(168,85,247,.14);
-  background: rgba(255,255,255,.72);
-  border-radius:16px;
-  padding:10px;
-  margin-bottom:10px;
-}
-
-.project-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-
-.project-name{
-  font-weight:900;
-  font-size:13px;
-}
-.project-actions{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.plusbtn{
-  width:30px; height:30px;
-  border-radius:10px;
-  border:1px solid rgba(168,85,247,.18);
-  background: rgba(168,85,247,.10);
-  cursor:pointer;
-  font-weight:900;
-  display:grid;
-  place-items:center;
-}
-
-.tasklist{
-  margin-top:8px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.task{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(168,85,247,.12);
-  background: rgba(255,255,255,.85);
-  cursor:pointer;
-  font-size:13px;
-}
-
-.task small{
-  color: var(--muted);
-  font-weight:600;
-}
-
-.task.active{
-  border-color: rgba(168,85,247,.55);
-  box-shadow:0 10px 22px rgba(168,85,247,.10);
-  background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(192,132,252,.12));
-}
-
-.addrow{
-  display:none;
-  margin-top:8px;
-  gap:8px;
-}
-.addrow.show{ display:flex; }
-
-.addrow input{
-  flex:1;
-  border:1px solid rgba(168,85,247,.18);
-  background: rgba(255,255,255,.90);
-  border-radius:12px;
-  padding:10px 10px;
-  outline:none;
-  font-weight:650;
-}
-
-.addrow button{
-  border:none;
-  border-radius:12px;
-  padding:10px 12px;
-  cursor:pointer;
   font-weight:800;
-  background: linear-gradient(135deg,var(--accent),var(--accent2));
-  color:white;
-  box-shadow:0 12px 26px rgba(168,85,247,.18);
 }
 
-/* ===== Main app ===== */
+/* ===== App container ===== */
 .app{
-  width:min(980px, 100%);
+  width:min(960px,100%);
   display:flex;
   flex-direction:column;
-  align-items:center;
   gap:14px;
+  align-items:center;
 }
 
+/* ===== Top rows ===== */
 .top{
   display:flex;
   gap:10px;
@@ -288,12 +116,16 @@ body{
   justify-content:center;
 }
 
+/* ===== Ring ===== */
 .ring{
   width:320px;
   height:320px;
   border-radius:50%;
   background:
-    conic-gradient(var(--accent) calc(var(--progress)*1turn), var(--ringTrack) 0);
+    conic-gradient(
+      var(--accent) calc(var(--progress)*1turn),
+      var(--ringTrack) 0
+    );
   display:grid;
   place-items:center;
 }
@@ -308,23 +140,21 @@ body{
   align-items:center;
   justify-content:center;
   box-shadow:0 20px 50px rgba(0,0,0,.10);
-  text-align:center;
-  padding:14px;
 }
 
+/* ===== Timer text ===== */
 .time{
   font-size:64px;
   font-weight:900;
-  letter-spacing:.5px;
-  line-height:1;
 }
 
 .sub{
   font-size:13px;
-  opacity:.60;
-  margin-top:10px;
+  opacity:.6;
+  margin-top:8px;
 }
 
+/* ===== Controls ===== */
 .controls{
   display:flex;
   gap:10px;
@@ -337,296 +167,106 @@ button{
   border-radius:14px;
   border:none;
   cursor:pointer;
+  font-weight:800;
   background:white;
   box-shadow:0 10px 30px rgba(0,0,0,.10);
-  font-weight:800;
 }
-button:disabled{ opacity:.55; cursor:not-allowed; }
-.primary{
+
+button.primary{
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   color:white;
 }
 
-.warning{
-  font-size:12px;
-  color: rgba(0,0,0,.58);
-  margin-top:6px;
-  min-height:16px;
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
-.warning strong{ color: rgba(168,85,247,.95); }
 
+/* ===== Logs ===== */
 .logbox{
-  width:min(860px, 100%);
+  width:100%;
+  max-width:860px;
   padding:14px;
 }
+
 .loghead{
   display:flex;
-  align-items:center;
   justify-content:space-between;
+  align-items:center;
   gap:10px;
-  margin-bottom:10px;
 }
+
 .logtitle{
   font-weight:900;
-  font-size:14px;
 }
+
 .copybtn{
-  border:1px solid rgba(168,85,247,.18);
-  background: rgba(168,85,247,.10);
   border-radius:12px;
+  border:1px solid rgba(168,85,247,.18);
+  background:rgba(168,85,247,.12);
   padding:8px 12px;
+  font-weight:900;
   cursor:pointer;
+}
+
+/* ===== Stats panel content ===== */
+.stats h3{
+  margin:4px 0 10px;
+  font-size:14px;
   font-weight:900;
 }
-.copybtn:active{ transform: translateY(1px); }
 
-.toggle{
-  margin-top:10px;
-  border-top:1px dashed rgba(168,85,247,.22);
-  padding-top:10px;
-}
-.toggler{
-  cursor:pointer;
-  font-weight:900;
-  font-size:13px;
-  user-select:none;
-}
-.past{
-  margin-top:10px;
-  display:none;
-}
-.past.show{ display:block; }
-
-.mini{
-  font-size:12px;
-  color: var(--muted);
-  margin-top:6px;
-}
-
-  /* ===== Right stats panel ===== */
-.shell{
-  grid-template-columns: 320px 1fr 360px; /* + stats */
-}
-
-.stats{
-  height:100%;
-  padding:14px;
-  border-left: 1px solid var(--panelBorder);
-  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.58));
-  backdrop-filter: blur(10px);
-  overflow:auto;
-}
-
-.shell.collapsed{
-  grid-template-columns: 68px 1fr 360px;
-}
-
-.stats-card{
-  padding:14px;
-}
-
-.stats-top{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:12px;
-}
-
-.tabs{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-
-.tab{
-  border:1px solid rgba(168,85,247,.16);
-  background: rgba(255,255,255,.85);
-  padding:8px 10px;
-  border-radius:12px;
-  cursor:pointer;
-  font-weight:900;
-  font-size:12px;
-}
-.tab.active{
-  background: linear-gradient(135deg, rgba(168,85,247,.18), rgba(192,132,252,.14));
-  border-color: rgba(168,85,247,.35);
-}
-
-.stats-controls{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin-top:10px;
-}
-
-.select{
-  border:1px solid rgba(168,85,247,.16);
-  background: rgba(255,255,255,.90);
-  border-radius:12px;
-  padding:8px 10px;
-  font-weight:800;
-  font-size:12px;
-  outline:none;
-}
-
-.togglebtn{
-  border:1px solid rgba(168,85,247,.18);
-  background: rgba(168,85,247,.10);
-  border-radius:12px;
-  padding:8px 10px;
-  cursor:pointer;
-  font-weight:900;
-  font-size:12px;
-}
-
-.donut-wrap{
-  margin-top:14px;
-  display:grid;
-  place-items:center;
-}
-
-.donut{
-  width:260px;
-  height:260px;
-  position:relative;
-}
-
-.donut svg{
+.stats .chart{
   width:100%;
-  height:100%;
-  transform: rotate(-90deg);
-  overflow:visible;
-}
-
-.donut .center{
-  position:absolute;
-  inset:0;
+  aspect-ratio:1/1;
+  border-radius:50%;
+  background:
+    conic-gradient(
+      var(--accent) 0deg,
+      var(--accent2) 120deg,
+      rgba(168,85,247,.15) 120deg 360deg
+    );
   display:grid;
   place-items:center;
-  text-align:center;
-  pointer-events:none;
 }
 
-.center .big{
-  font-size:44px;
-  font-weight:1000;
-  letter-spacing:.4px;
-  line-height:1;
-}
-.center .small{
-  margin-top:6px;
-  font-size:12px;
-  color: var(--muted);
-  font-weight:800;
-}
-
-.legend{
-  margin-top:14px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.leg-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(168,85,247,.12);
-  background: rgba(255,255,255,.72);
-  font-size:13px;
-}
-
-.dot{
-  width:10px; height:10px;
-  border-radius:999px;
-  flex:0 0 10px;
-  box-shadow:0 8px 18px rgba(0,0,0,.10);
-}
-
-.leg-left{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-.leg-left span{
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.stats .chart span{
+  font-size:28px;
   font-weight:900;
 }
-.leg-right{
-  display:flex;
-  align-items:baseline;
-  gap:8px;
-}
-.leg-right b{ font-weight:1000; }
-.leg-right small{ color:var(--muted); font-weight:900; }
 
-.bars{
-  margin-top:14px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+/* ===== Responsive ===== */
+@media(max-width:1100px){
+  .shell{
+    grid-template-columns: 280px 1fr;
+  }
+  .stats{
+    display:none;
+  }
 }
 
-.bar{
-  border:1px solid rgba(168,85,247,.12);
-  background: rgba(255,255,255,.72);
-  border-radius:14px;
-  padding:10px;
-}
-
-.barhead{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  font-size:13px;
-  font-weight:900;
-  margin-bottom:8px;
-}
-.bartrack{
-  height:12px;
-  border-radius:999px;
-  background: rgba(168,85,247,.12);
-  overflow:hidden;
-}
-.barfill{
-  height:100%;
-  border-radius:999px;
-  width:0%;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  transition: width .25s ease;
-}
-
-/* Responsive: hide stats under content on small screens */
-@media (max-width:1100px){
-  .shell{ grid-template-columns: 320px 1fr; }
-  .stats{ display:none; }
-}
-
-@media (max-width:860px){
-  .shell{ grid-template-columns: 1fr; }
+@media(max-width:860px){
+  .shell{
+    grid-template-columns:1fr;
+  }
   .sidebar{
-    height:auto;
     border-right:none;
     border-bottom:1px solid var(--panelBorder);
   }
-  .shell.collapsed{ grid-template-columns: 1fr; }
-  .shell.collapsed .sidebar-inner{ display:block; }
 }
 </style>
-</head>
-
+<!-- =================================================
+     BODY (solo el HTML dentro de <body> ... </body>)
+     ✅ Incluye: sidebar izquierda + main + sidebar derecha (stats)
+================================================== -->
 <body>
-  <div class="petal-layer" id="petalLayer"></div>
 
+  <!-- Left + Main + Right -->
   <div class="shell" id="shell">
+
+    <!-- =======================
+         LEFT SIDEBAR (Tasks)
+    ======================== -->
     <aside class="sidebar">
       <div class="sb-top">
         <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
@@ -643,8 +283,12 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
       </div>
     </aside>
 
+    <!-- =======================
+         MAIN APP
+    ======================== -->
     <main class="main">
       <div class="app">
+
         <div class="top">
           <div class="pill">
             <b id="modeLabel">Focus</b>
@@ -712,46 +356,56 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
         </div>
 
         <div class="mini" id="copyHint"></div>
+
       </div>
     </main>
-  </div>
-    <!-- Right Stats -->
+
+    <!-- =======================
+         RIGHT SIDEBAR (Stats)
+    ======================== -->
     <aside class="stats">
-      <div class="panel stats-card">
-        <div class="stats-top">
-          <div style="font-weight:1000;">Stats</div>
-          <button class="togglebtn" id="chartToggle">Circular</button>
+      <div class="panel" style="padding:14px;">
+        <h3 style="margin:0 0 10px;">Stats</h3>
+
+        <!-- Tabs -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <button id="tabToday" class="primary" style="padding:8px 12px;">Today</button>
+          <button id="tabWeek" style="padding:8px 12px;">This Week</button>
+          <button id="tabMonth" style="padding:8px 12px;">This Month</button>
         </div>
 
-        <div class="tabs">
-          <button class="tab active" data-range="today">Today</button>
-          <button class="tab" data-range="week">This Week</button>
-          <button class="tab" data-range="month">This Month</button>
-        </div>
-
-        <div class="stats-controls">
-          <select class="select" id="groupBy">
-            <option value="project">Project</option>
-            <option value="task">Task</option>
-          </select>
-        </div>
-
-        <div class="donut-wrap" id="donutWrap">
-          <div class="donut">
-            <svg viewBox="0 0 120 120" id="donutSvg"></svg>
-            <div class="center">
-              <div class="big" id="donutTotal">0</div>
-              <div class="small">Minutes</div>
-            </div>
+        <!-- Chart mode toggle -->
+        <div class="pill" style="justify-content:space-between; margin-bottom:12px;">
+          <span>View</span>
+          <div style="display:flex; gap:8px;">
+            <button id="viewPie" class="primary" style="padding:8px 12px;">Circular</button>
+            <button id="viewBar" style="padding:8px 12px;">Linear</button>
           </div>
         </div>
 
-        <div class="bars" id="barsWrap" style="display:none;"></div>
+        <!-- Chart holder -->
+        <div id="statsChart" class="chart">
+          <span id="statsTotal">0</span>
+        </div>
 
-        <div class="legend" id="legend"></div>
+        <div class="mini" id="statsSubtitle" style="margin-top:10px;">
+          Minutes tracked by project.
+        </div>
+
+        <!-- Legend / breakdown -->
+        <div id="statsLegend" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
       </div>
     </aside>
- </div>
+
+  </div>
+
+  <!-- JS goes after this -->
+</body>
+<!-- =========================
+     ULTIMA PARTE (lo que faltaba)
+     ✅ Pega esto DESPUÉS del HTML del body que ya pusiste.
+     ✅ Incluye: cierre + <script> COMPLETO + cierre de </body></html>
+========================= -->
 <script>
 /* =========================
    Projects (fixed) + Storage
@@ -773,9 +427,7 @@ const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
 function uid(){
   return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
 }
-function safeId(str){
-  return String(str).toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9\-_]/g,"");
-}
+
 function loadJSON(key, fallback){
   try{
     const raw = localStorage.getItem(key);
@@ -789,6 +441,10 @@ function saveJSON(key, value){
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function safeId(str){
+  return String(str).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+}
+
 /* =========================
    Weekly key (Monday-based)
 ========================= */
@@ -800,6 +456,7 @@ function weekStartMonday(d = new Date()){
   date.setDate(date.getDate() + diff);
   return date;
 }
+
 function weekKey(d = new Date()){
   const ws = weekStartMonday(d);
   const y = ws.getFullYear();
@@ -807,11 +464,27 @@ function weekKey(d = new Date()){
   const da = String(ws.getDate()).padStart(2,"0");
   return `${y}-${m}-${da}`;
 }
+
 function prettyWeekLabel(key){
   const [y,m,d] = key.split("-").map(Number);
   const dt = new Date(y, m-1, d);
   const opts = { year:"numeric", month:"short", day:"numeric" };
   return `Week of ${dt.toLocaleDateString("en-US", opts)}`;
+}
+
+/* =========================
+   Date keys for stats
+========================= */
+function dayKey(d = new Date()){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${da}`;
+}
+function monthKey(d = new Date()){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  return `${y}-${m}`;
 }
 
 /* =========================
@@ -827,13 +500,14 @@ if(!tasksByProject){
 }
 
 let sessions = loadJSON(STORAGE_SESSIONS, []);
-// { ts, weekKey, project, taskId, taskName, minutes }
+// entry: { ts, weekKey, project, taskId, taskName, minutes }
 
 let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
+
 function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
 /* =========================
-   Elements
+   DOM refs
 ========================= */
 const ring = document.getElementById("ring");
 const timeEl = document.getElementById("time");
@@ -866,6 +540,21 @@ const btnPause = document.getElementById("pause");
 const btnStop  = document.getElementById("stop");
 const btnSkip  = document.getElementById("skip");
 const btnReset = document.getElementById("reset");
+
+const projectsRoot = document.getElementById("projectsRoot");
+const shell = document.getElementById("shell");
+const collapseBtn = document.getElementById("collapseBtn");
+
+/* ===== Stats DOM ===== */
+const tabToday = document.getElementById("tabToday");
+const tabWeek  = document.getElementById("tabWeek");
+const tabMonth = document.getElementById("tabMonth");
+const viewPie  = document.getElementById("viewPie");
+const viewBar  = document.getElementById("viewBar");
+const statsChart = document.getElementById("statsChart");
+const statsLegend = document.getElementById("statsLegend");
+const statsTotal = document.getElementById("statsTotal");
+const statsSubtitle = document.getElementById("statsSubtitle");
 
 /* =========================
    Clamp helpers
@@ -967,6 +656,7 @@ function spawnPetal(){
   layer.appendChild(p);
   setTimeout(() => p.remove(), 9000);
 }
+
 function startPetals(){
   if(petalInterval) return;
   for(let i=0;i<10;i++) spawnPetal();
@@ -980,14 +670,14 @@ function stopPetals(){
 /* =========================
    Timer state
 ========================= */
-let mode = "focus";
+let mode = "focus";  // "focus" | "break"
 let pomos = 0;
 let total = focusMinutes() * 60;
 let remaining = total;
-
 let timer = null;
 let lastTick = null;
 
+// partial-focus tracking
 let blockStartTs = null;
 let focusStartedRemaining = null;
 
@@ -999,6 +689,7 @@ function selectedTaskObj(){
   const list = tasksByProject[selected.project] || [];
   return list.find(t => t.id === selected.taskId) || null;
 }
+
 function updateSelectedLabels(){
   const t = selectedTaskObj();
   if(!t){
@@ -1010,11 +701,12 @@ function updateSelectedLabels(){
   }
   enforceStartLock();
 }
+
 function enforceStartLock(){
   const hasTask = !!selectedTaskObj();
   if(!hasTask){
     btnStart.disabled = true;
-    warningEl.textContent = "Choose a task before starting focus";
+    warningEl.innerHTML = `Choose a task before starting focus`;
   }else{
     if(!timer) btnStart.disabled = false;
     warningEl.textContent = "";
@@ -1028,6 +720,7 @@ function sessionsThisWeek(){
   const wk = weekKey(new Date());
   return sessions.filter(s => s.weekKey === wk);
 }
+
 function groupWeekly(slist){
   const out = {};
   for(const s of slist){
@@ -1038,12 +731,49 @@ function groupWeekly(slist){
   }
   return out;
 }
+
 function computeFocusedThisWeekMinutes(){
-  const slist = sessionsThisWeek();
   let sum = 0;
-  for(const s of slist) sum += s.minutes;
+  for(const s of sessionsThisWeek()) sum += s.minutes;
   return sum;
 }
+
+function renderWeeklyLog(){
+  const wk = weekKey(new Date());
+  const slist = sessionsThisWeek();
+  const grouped = groupWeekly(slist);
+
+  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
+  const focusedMin = computeFocusedThisWeekMinutes();
+  focusedLabel.textContent = String(focusedMin);
+  goalLabel.textContent = String(goalMinutes());
+
+  if(Object.keys(grouped).length === 0){
+    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
+  }else{
+    let html = "";
+    for(const project of PROJECTS){
+      if(!grouped[project]) continue;
+      const p = grouped[project];
+      html += `<div style="margin-bottom:10px;">
+        <div style="font-weight:900;">${project} — ${p.total} min</div>
+        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
+      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
+      for(const [taskName, mins] of taskEntries){
+        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
+          <span>${taskName}</span>
+          <b>${mins} min</b>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    weeklyLogEl.innerHTML = html;
+  }
+
+  renderPastWeeks();
+  renderStats(); // keep stats synced
+}
+
 function renderPastWeeks(){
   const current = weekKey(new Date());
   const keys = Array.from(new Set(sessions.map(s => s.weekKey)))
@@ -1078,40 +808,7 @@ function renderPastWeeks(){
   }
   pastWeeksEl.innerHTML = html;
 }
-function renderWeeklyLog(){
-  const wk = weekKey(new Date());
-  const slist = sessionsThisWeek();
-  const grouped = groupWeekly(slist);
 
-  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
-  const focusedMin = computeFocusedThisWeekMinutes();
-  focusedLabel.textContent = String(focusedMin);
-  goalLabel.textContent = String(goalMinutes());
-
-  if(Object.keys(grouped).length === 0){
-    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
-  }else{
-    let html = "";
-    for(const project of PROJECTS){
-      if(!grouped[project]) continue;
-      const p = grouped[project];
-      html += `<div style="margin-bottom:10px;">
-        <div style="font-weight:900;">${project} — ${p.total} min</div>
-        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
-      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
-      for(const [taskName, mins] of taskEntries){
-        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
-          <span>${taskName}</span>
-          <b>${mins} min</b>
-        </div>`;
-      }
-      html += `</div></div>`;
-    }
-    weeklyLogEl.innerHTML = html;
-  }
-
-  renderPastWeeks();
-}
 function weeklySummaryText(){
   const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
@@ -1147,6 +844,7 @@ function fmt(sec){
   const s = Math.floor(sec%60).toString().padStart(2,"0");
   return `${m}:${s}`;
 }
+
 function nextBreakMins(nextPomo){
   return (nextPomo % longEvery() === 0) ? longBreakMinutes() : shortBreakMinutes();
 }
@@ -1177,7 +875,6 @@ function render(){
   const progress = 1 - (remaining / total);
   ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
 
-  // lock settings while running
   const running = !!timer;
   focusInput.disabled = running;
   shortBreakInput.disabled = running;
@@ -1194,15 +891,17 @@ function render(){
 }
 
 /* =========================
-   Session logging
+   Session logging (minutes)
 ========================= */
-function logFocusSession(minutes){
+function logFocusMinutes(minutes){
   const t = selectedTaskObj();
-  if(!t) return; // should not happen due to lock
+  if(!t) return;
 
   const entry = {
     ts: new Date().toISOString(),
     weekKey: weekKey(new Date()),
+    dayKey: dayKey(new Date()),
+    monthKey: monthKey(new Date()),
     project: selected.project,
     taskId: t.id,
     taskName: t.name,
@@ -1215,15 +914,12 @@ function logFocusSession(minutes){
 
 function logPartialFocusIfNeeded(){
   if(mode !== "focus") return;
-  if(blockStartTs === null || focusStartedRemaining === null) return;
+  if(focusStartedRemaining === null) return;
 
   const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
-  const minutes = Math.round(elapsedSec / 60); // redondeo a minuto
-  if(minutes >= 1){
-    logFocusSession(minutes); // ahora con minutos reales
-  }
+  const minutes = Math.round(elapsedSec / 60);
+  if(minutes >= 1) logFocusMinutes(minutes);
 
-  // reset del tracking del bloque
   blockStartTs = null;
   focusStartedRemaining = null;
 }
@@ -1234,7 +930,6 @@ function logPartialFocusIfNeeded(){
 function startTimer(){
   if(timer) return;
 
-  // Must have task
   if(!selectedTaskObj()){
     enforceStartLock();
     return;
@@ -1269,10 +964,9 @@ function startTimer(){
       lastTick = null;
 
       if(mode === "focus"){
-        // log full focus block minutes to selected task/project
-        logFocusSession(focusMinutes());
+        // full block counts as configured focus minutes
+        logFocusMinutes(focusMinutes());
 
-        // reset tracking de tiempo real
         blockStartTs = null;
         focusStartedRemaining = null;
 
@@ -1294,20 +988,25 @@ function startTimer(){
 }
 
 function pauseTimer(){
+  if(!timer) return;
   clearInterval(timer);
   timer = null;
   lastTick = null;
 
-  // log partial minutes if we were focusing
   logPartialFocusIfNeeded();
-
   stopPetals();
   render();
 }
 
 function stopToBlockStart(){
-  // stop = pause + volver al inicio del bloque actual
-  pauseTimer();
+  // Stop returns to the start of current block
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    lastTick = null;
+  }
+  logPartialFocusIfNeeded();
+  stopPetals();
   remaining = total;
   render();
 }
@@ -1324,34 +1023,44 @@ btnPause.onclick = () => {
 
 btnStop.onclick = () => {
   unlockAudioOnUserGesture();
-  logPartialFocusIfNeeded();
   stopToBlockStart();
 };
 
-// Skip: advance block
-// - If skipping focus, log partial focus minutes (if any) and advance
 btnSkip.onclick = () => {
   unlockAudioOnUserGesture();
 
-  // stop interval but keep current remaining to compute partial
-  pauseTimer();
-
+  // if currently focusing, log partial minutes (by design)
   if(mode === "focus"){
-    if(!selectedTaskObj()){
-      enforceStartLock();
-      return;
-    }
-    // time already logged by pauseTimer() via logPartialFocusIfNeeded()
+    logPartialFocusIfNeeded();
     pomos += 1;
     setMode("break");
   }else{
     setMode("focus");
   }
+
+  // always stop running timer and reset to new block
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    lastTick = null;
+  }
+  stopPetals();
+  render();
 };
 
 btnReset.onclick = () => {
   unlockAudioOnUserGesture();
-  pauseTimer();
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    lastTick = null;
+  }
+  stopPetals();
+
+  // don't log on reset (pure reset)
+  blockStartTs = null;
+  focusStartedRemaining = null;
+
   pomos = 0;
   setMode("focus");
 };
@@ -1385,7 +1094,6 @@ pastToggleEl.onclick = () => {
 
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
 
-    // si NO está corriendo, el reloj debe reflejar el bloque actual
     if(!timer){
       if(mode === "focus"){
         total = focusMinutes() * 60;
@@ -1408,12 +1116,6 @@ pastToggleEl.onclick = () => {
 /* =========================
    Sidebar rendering
 ========================= */
-const projectsRoot = document.getElementById("projectsRoot");
-
-function safeId(s){
-  return String(s).replace(/\W+/g,"_");
-}
-
 function renderSidebar(){
   let html = "";
   for(const project of PROJECTS){
@@ -1462,7 +1164,6 @@ projectsRoot.addEventListener("click", (e) => {
 
   if(action === "toggleAdd"){
     const row = document.getElementById(`add-${safeId(project)}`);
-    if(!row) return;
     row.classList.toggle("show");
     const inp = row.querySelector("input");
     setTimeout(()=>inp?.focus?.(), 0);
@@ -1471,9 +1172,8 @@ projectsRoot.addEventListener("click", (e) => {
 
   if(action === "addTask"){
     const row = document.getElementById(`add-${safeId(project)}`);
-    if(!row) return;
     const inp = row.querySelector("input");
-    const name = (inp?.value || "").trim();
+    const name = (inp.value || "").trim();
     if(!name) return;
 
     tasksByProject[project].push({ id: uid(), name });
@@ -1481,7 +1181,6 @@ projectsRoot.addEventListener("click", (e) => {
 
     inp.value = "";
     row.classList.remove("show");
-
     renderSidebar();
     return;
   }
@@ -1501,17 +1200,181 @@ projectsRoot.addEventListener("click", (e) => {
 /* =========================
    Collapse sidebar
 ========================= */
-const shell = document.getElementById("shell");
-const collapseBtn = document.getElementById("collapseBtn");
-
 (function initCollapse(){
-  const ui = loadJSON(STORAGE_UI + "_collapse", { collapsed:false });
+  const ui = loadJSON(STORAGE_COLLAPSE, { collapsed:false });
   if(ui.collapsed) shell.classList.add("collapsed");
+
   collapseBtn.onclick = () => {
     shell.classList.toggle("collapsed");
-    saveJSON(STORAGE_UI + "_collapse", { collapsed: shell.classList.contains("collapsed") });
+    saveJSON(STORAGE_COLLAPSE, { collapsed: shell.classList.contains("collapsed") });
   };
 })();
+
+/* =========================
+   STATS (Today / Week / Month + Pie / Linear)
+========================= */
+let statsScope = loadJSON("pomo_stats_scope_v1", "week"); // "today" | "week" | "month"
+let statsView  = loadJSON("pomo_stats_view_v1", "pie");   // "pie" | "bar"
+
+function setActiveBtn(btn, active){
+  if(!btn) return;
+  btn.classList.toggle("primary", !!active);
+}
+
+function sessionsByScope(scope){
+  const now = new Date();
+
+  if(scope === "today"){
+    const dk = dayKey(now);
+    return sessions.filter(s => (s.dayKey || dayKey(new Date(s.ts))) === dk);
+  }
+  if(scope === "month"){
+    const mk = monthKey(now);
+    return sessions.filter(s => (s.monthKey || monthKey(new Date(s.ts))) === mk);
+  }
+  // week
+  const wk = weekKey(now);
+  return sessions.filter(s => s.weekKey === wk);
+}
+
+function totalsByProject(slist){
+  const totals = {};
+  for(const p of PROJECTS) totals[p] = 0;
+  for(const s of slist){
+    if(!totals[s.project]) totals[s.project] = 0;
+    totals[s.project] += s.minutes;
+  }
+  return totals;
+}
+
+function sumTotals(totals){
+  return Object.values(totals).reduce((a,b)=>a+b,0);
+}
+
+function toPieConic(totals){
+  // returns conic-gradient string
+  const entries = Object.entries(totals).filter(([,v])=>v>0);
+  if(entries.length === 0) return "conic-gradient(rgba(168,85,247,.18) 0 360deg)";
+
+  const sum = entries.reduce((a,[,v])=>a+v,0);
+  let acc = 0;
+  const stops = [];
+  // use 2 theme purples + soft variants
+  const palette = [
+    "rgba(168,85,247,.92)",
+    "rgba(192,132,252,.90)",
+    "rgba(168,85,247,.55)",
+    "rgba(192,132,252,.55)",
+    "rgba(168,85,247,.30)",
+    "rgba(192,132,252,.30)"
+  ];
+  entries.forEach(([k,v], i) => {
+    const a0 = acc;
+    acc += (v/sum) * 360;
+    const color = palette[i % palette.length];
+    stops.push(`${color} ${a0}deg ${acc}deg`);
+  });
+  return `conic-gradient(${stops.join(",")})`;
+}
+
+function renderStatsLegend(totals){
+  const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  if(entries.length === 0){
+    statsLegend.innerHTML = `<div class="mini">No minutes yet for this range.</div>`;
+    return;
+  }
+  const total = sumTotals(totals);
+  let html = "";
+  for(const [name, mins] of entries){
+    const pct = total ? Math.round((mins/total)*100) : 0;
+    html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
+      <span>${name}</span>
+      <b>${mins}m <span style="opacity:.55; font-weight:800;">(${pct}%)</span></b>
+    </div>`;
+  }
+  statsLegend.innerHTML = html;
+}
+
+function renderPie(totals){
+  const total = sumTotals(totals);
+  statsTotal.textContent = String(total);
+  statsChart.classList.remove("bar");
+
+  statsChart.style.background = toPieConic(totals);
+
+  const label = (statsScope === "today") ? "Today" : (statsScope === "month") ? "This month" : "This week";
+  statsSubtitle.textContent = `${label} • Minutes by project`;
+  renderStatsLegend(totals);
+}
+
+function renderBars(totals){
+  const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const total = sumTotals(totals);
+  statsTotal.textContent = String(total);
+
+  statsChart.classList.add("bar");
+  statsChart.style.background = "rgba(255,255,255,.9)";
+
+  // build inner bars
+  let inner = `<div class="barwrap">`;
+  const max = Math.max(...entries.map(([,v])=>v), 1);
+  for(const [name, mins] of entries){
+    const w = Math.round((mins/max)*100);
+    inner += `<div class="barrow">
+      <div class="barlabel">${name}</div>
+      <div class="bartrack"><div class="barfill" style="width:${w}%"></div></div>
+      <div class="barmins">${mins}m</div>
+    </div>`;
+  }
+  inner += `</div>`;
+
+  statsChart.innerHTML = inner;
+
+  const label = (statsScope === "today") ? "Today" : (statsScope === "month") ? "This month" : "This week";
+  statsSubtitle.textContent = `${label} • Linear compare`;
+  renderStatsLegend(totals);
+}
+
+function renderStats(){
+  if(!statsChart) return;
+  const slist = sessionsByScope(statsScope);
+  const totals = totalsByProject(slist);
+
+  // reset chart inner (for pie we want center number)
+  if(statsView === "pie"){
+    statsChart.innerHTML = `<span id="statsTotal">${sumTotals(totals)}</span>`;
+    // rebind because we replaced it
+    const newTotal = statsChart.querySelector("#statsTotal");
+    if(newTotal) newTotal.textContent = String(sumTotals(totals));
+    // keep pointer
+    renderPie(totals);
+  }else{
+    renderBars(totals);
+  }
+
+  setActiveBtn(tabToday, statsScope === "today");
+  setActiveBtn(tabWeek,  statsScope === "week");
+  setActiveBtn(tabMonth, statsScope === "month");
+  setActiveBtn(viewPie,  statsView === "pie");
+  setActiveBtn(viewBar,  statsView === "bar");
+}
+
+function setScope(scope){
+  statsScope = scope;
+  saveJSON("pomo_stats_scope_v1", statsScope);
+  renderStats();
+}
+function setView(view){
+  statsView = view;
+  saveJSON("pomo_stats_view_v1", statsView);
+  renderStats();
+}
+
+tabToday?.addEventListener("click", ()=>setScope("today"));
+tabWeek?.addEventListener("click", ()=>setScope("week"));
+tabMonth?.addEventListener("click", ()=>setScope("month"));
+viewPie?.addEventListener("click", ()=>setView("pie"));
+viewBar?.addEventListener("click", ()=>setView("bar"));
 
 /* =========================
    Init
@@ -1522,244 +1385,7 @@ updateSelectedLabels();
 setMode("focus");
 renderWeeklyLog();
 render();
-  /* =========================
-   Stats panel (Right)
-========================= */
-const STAT_UI_KEY = "pomo_stats_ui_v1";
-let statUI = loadJSON(STAT_UI_KEY, { range:"week", view:"donut", groupBy:"project" });
-
-const donutSvg = document.getElementById("donutSvg");
-const donutTotalEl = document.getElementById("donutTotal");
-const legendEl = document.getElementById("legend");
-const donutWrap = document.getElementById("donutWrap");
-const barsWrap = document.getElementById("barsWrap");
-const groupBySel = document.getElementById("groupBy");
-const chartToggle = document.getElementById("chartToggle");
-
-const palette = [
-  "#A855F7", "#C084FC", "#D8B4FE", "#F5D0FE", "#FFC7F8", "#B794F4"
-];
-
-function saveStatUI(){ saveJSON(STAT_UI_KEY, statUI); }
-
-function startOfToday(){
-  const d = new Date(); d.setHours(0,0,0,0); return d;
-}
-function startOfMonth(){
-  const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d;
-}
-function inRange(tsISO, range){
-  const d = new Date(tsISO);
-  if(range === "today"){
-    return d >= startOfToday();
-  }
-  if(range === "month"){
-    return d >= startOfMonth();
-  }
-  // week = current monday weekKey
-  return weekKey(d) === weekKey(new Date());
-}
-
-function getStatRows(){
-  const range = statUI.range;
-  const groupBy = statUI.groupBy;
-
-  const filtered = sessions.filter(s => inRange(s.ts, range));
-  const map = new Map(); // key -> minutes, label -> minutes
-
-  for(const s of filtered){
-    const key = (groupBy === "task")
-      ? `${s.project}__${s.taskName}`
-      : s.project;
-
-    const label = (groupBy === "task")
-      ? `${s.taskName} (${s.project})`
-      : s.project;
-
-    map.set(key, (map.get(key) || 0) + s.minutes);
-    map.set(key + "__label", label);
-  }
-
-  const rows = [];
-  for(const [k,v] of map.entries()){
-    if(k.endsWith("__label")) continue;
-    const label = map.get(k + "__label");
-    rows.push({ key:k, label, minutes:v });
-  }
-
-  rows.sort((a,b)=> b.minutes - a.minutes);
-  return rows;
-}
-
-function donutSegment(cx, cy, r, startAngle, endAngle){
-  const toXY = (ang) => {
-    const rad = (Math.PI/180) * ang;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  };
-  const s = toXY(startAngle);
-  const e = toXY(endAngle);
-  const large = (endAngle - startAngle) > 180 ? 1 : 0;
-  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
-}
-
-function renderDonut(rows){
-  donutSvg.innerHTML = "";
-  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
-  donutTotalEl.textContent = String(total);
-
-  // base ring track
-  const track = document.createElementNS("http://www.w3.org/2000/svg","circle");
-  track.setAttribute("cx","60");
-  track.setAttribute("cy","60");
-  track.setAttribute("r","44");
-  track.setAttribute("fill","none");
-  track.setAttribute("stroke","rgba(168,85,247,.14)");
-  track.setAttribute("stroke-width","12");
-  donutSvg.appendChild(track);
-
-  if(total <= 0) return;
-
-  let angle = 0;
-  rows.slice(0, 8).forEach((row, idx) => {
-    const portion = row.minutes / total;
-    const sweep = Math.max(2, portion * 360); // minimum visible slice
-    const start = angle;
-    const end = angle + sweep;
-
-    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
-    path.setAttribute("d", donutSegment(60,60,44,start,end));
-    path.setAttribute("fill","none");
-    path.setAttribute("stroke", palette[idx % palette.length]);
-    path.setAttribute("stroke-width","12");
-    path.setAttribute("stroke-linecap","round");
-    path.setAttribute("opacity","0.95");
-
-    // tooltip
-    const title = document.createElementNS("http://www.w3.org/2000/svg","title");
-    const pct = Math.round((portion*100));
-    title.textContent = `${row.label}: ${row.minutes} min (${pct}%)`;
-    path.appendChild(title);
-
-    donutSvg.appendChild(path);
-    angle = end;
-  });
-}
-
-function renderBars(rows){
-  barsWrap.innerHTML = "";
-  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
-  donutTotalEl.textContent = String(total);
-
-  if(total <= 0){
-    barsWrap.innerHTML = `<div class="mini">No minutes logged in this range.</div>`;
-    return;
-  }
-
-  const top = rows.slice(0, 10);
-  const max = Math.max(...top.map(r=>r.minutes));
-
-  top.forEach((row) => {
-    const wrap = document.createElement("div");
-    wrap.className = "bar";
-    wrap.innerHTML = `
-      <div class="barhead">
-        <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${row.label}</span>
-        <span>${row.minutes} min</span>
-      </div>
-      <div class="bartrack"><div class="barfill"></div></div>
-    `;
-    barsWrap.appendChild(wrap);
-    const fill = wrap.querySelector(".barfill");
-    const pct = (row.minutes / max) * 100;
-    requestAnimationFrame(()=> fill.style.width = pct.toFixed(1) + "%");
-  });
-}
-
-function renderLegend(rows){
-  legendEl.innerHTML = "";
-  const total = rows.reduce((sum,r)=>sum+r.minutes,0);
-
-  if(total <= 0){
-    legendEl.innerHTML = `<div class="mini">No minutes logged in this range yet.</div>`;
-    return;
-  }
-
-  rows.slice(0, 8).forEach((row, idx) => {
-    const pct = Math.round((row.minutes / total) * 100);
-    const item = document.createElement("div");
-    item.className = "leg-row";
-    item.innerHTML = `
-      <div class="leg-left">
-        <div class="dot" style="background:${palette[idx % palette.length]};"></div>
-        <span title="${row.label}">${row.label}</span>
-      </div>
-      <div class="leg-right">
-        <b>${row.minutes}</b><small>min</small><small>${pct}%</small>
-      </div>
-    `;
-    legendEl.appendChild(item);
-  });
-}
-
-function renderStats(){
-  if(!donutSvg || !legendEl) return;
-
-  groupBySel.value = statUI.groupBy;
-
-  const rows = getStatRows();
-  renderLegend(rows);
-
-  if(statUI.view === "donut"){
-    chartToggle.textContent = "Circular";
-    donutWrap.style.display = "";
-    barsWrap.style.display = "none";
-    renderDonut(rows);
-  }else{
-    chartToggle.textContent = "Linear";
-    donutWrap.style.display = "none";
-    barsWrap.style.display = "";
-    renderBars(rows);
-  }
-}
-
-function setRange(range){
-  statUI.range = range;
-  saveStatUI();
-  document.querySelectorAll(".tab").forEach(b=>{
-    b.classList.toggle("active", b.dataset.range === range);
-  });
-  renderStats();
-}
-
-document.querySelectorAll(".tab").forEach(btn=>{
-  btn.addEventListener("click", ()=> setRange(btn.dataset.range));
-});
-
-groupBySel.addEventListener("change", ()=>{
-  statUI.groupBy = groupBySel.value;
-  saveStatUI();
-  renderStats();
-});
-
-chartToggle.addEventListener("click", ()=>{
-  statUI.view = (statUI.view === "donut") ? "bars" : "donut";
-  saveStatUI();
-  renderStats();
-});
-
-/* Hook: whenever sessions change, refresh stats */
-const _origRenderWeeklyLog = renderWeeklyLog;
-renderWeeklyLog = function(){
-  _origRenderWeeklyLog();
-  renderStats();
-};
-
-/* Init stats UI */
-(function initStats(){
-  setRange(statUI.range);
-  groupBySel.value = statUI.groupBy;
-  renderStats();
-})();
+renderStats();
 </script>
 
 </body>
