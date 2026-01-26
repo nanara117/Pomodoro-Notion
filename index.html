@@ -411,7 +411,7 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
     border-bottom:1px solid var(--panelBorder);
   }
   .shell.collapsed{ grid-template-columns: 1fr; }
-  .shell.collapsed .sidebar-inner{ display:block; } /* don't hide on mobile */
+  .shell.collapsed .sidebar-inner{ display:block; }
 }
 </style>
 </head>
@@ -420,7 +420,6 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   <div class="petal-layer" id="petalLayer"></div>
 
   <div class="shell" id="shell">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sb-top">
         <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
@@ -437,7 +436,6 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
       </div>
     </aside>
 
-    <!-- Main -->
     <main class="main">
       <div class="app">
         <div class="top">
@@ -527,11 +525,14 @@ const PROJECTS = [
 const STORAGE_TASKS = "pomo_tasks_v1";
 const STORAGE_SESSIONS = "pomo_sessions_v1";
 const STORAGE_UI = "pomo_ui_v1";
+const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
 
 function uid(){
   return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
 }
-
+function safeId(str){
+  return String(str).toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9\-_]/g,"");
+}
 function loadJSON(key, fallback){
   try{
     const raw = localStorage.getItem(key);
@@ -551,24 +552,19 @@ function saveJSON(key, value){
 function weekStartMonday(d = new Date()){
   const date = new Date(d);
   date.setHours(0,0,0,0);
-
-  // JS getDay(): 0=Sun..6=Sat
-  const day = date.getDay();
-  const diff = (day === 0 ? -6 : 1 - day); // move back to Monday
+  const day = date.getDay(); // 0=Sun..6=Sat
+  const diff = (day === 0 ? -6 : 1 - day);
   date.setDate(date.getDate() + diff);
   return date;
 }
-
 function weekKey(d = new Date()){
   const ws = weekStartMonday(d);
   const y = ws.getFullYear();
   const m = String(ws.getMonth()+1).padStart(2,"0");
   const da = String(ws.getDate()).padStart(2,"0");
-  return `${y}-${m}-${da}`; // key = Monday date
+  return `${y}-${m}-${da}`;
 }
-
 function prettyWeekLabel(key){
-  // key is YYYY-MM-DD (Monday)
   const [y,m,d] = key.split("-").map(Number);
   const dt = new Date(y, m-1, d);
   const opts = { year:"numeric", month:"short", day:"numeric" };
@@ -584,21 +580,17 @@ if(!tasksByProject){
   PROJECTS.forEach(p => tasksByProject[p] = []);
   saveJSON(STORAGE_TASKS, tasksByProject);
 }else{
-  // ensure all projects exist
   PROJECTS.forEach(p => { if(!tasksByProject[p]) tasksByProject[p] = []; });
 }
 
-let sessions = loadJSON(STORAGE_SESSIONS, []); 
-// session shape: { ts, weekKey, project, taskId, taskName, minutes }
+let sessions = loadJSON(STORAGE_SESSIONS, []);
+// { ts, weekKey, project, taskId, taskName, minutes }
 
 let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
-
-function persistUI(){
-  saveJSON(STORAGE_UI, selected);
-}
+function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
 /* =========================
-   Pomodoro config inputs
+   Elements
 ========================= */
 const ring = document.getElementById("ring");
 const timeEl = document.getElementById("time");
@@ -668,7 +660,7 @@ function playTick(){
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, t0); // C5
+  osc.frequency.setValueAtTime(523.25, t0);
   gain.gain.setValueAtTime(0.0001, t0);
   gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
@@ -686,7 +678,7 @@ function playChime(){
   master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.25);
   master.connect(audioCtx.destination);
 
-  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
+  const freqs = [659.25, 880.00, 987.77];
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -732,7 +724,6 @@ function spawnPetal(){
   layer.appendChild(p);
   setTimeout(() => p.remove(), 9000);
 }
-
 function startPetals(){
   if(petalInterval) return;
   for(let i=0;i<10;i++) spawnPetal();
@@ -746,15 +737,16 @@ function stopPetals(){
 /* =========================
    Timer state
 ========================= */
-let mode = "focus"; // "focus" | "break"
-let pomos = 0;      // for long-break schedule
-let total = 35 * 60;
+let mode = "focus";
+let pomos = 0;
+let total = focusMinutes() * 60;
 let remaining = total;
+
 let timer = null;
 let lastTick = null;
-let blockStartTs = null;     // cuándo arrancó el bloque actual
-let focusStartedRemaining = null; // cuántos segundos quedaban al iniciar
 
+let blockStartTs = null;
+let focusStartedRemaining = null;
 
 /* =========================
    Selection helpers
@@ -764,7 +756,6 @@ function selectedTaskObj(){
   const list = tasksByProject[selected.project] || [];
   return list.find(t => t.id === selected.taskId) || null;
 }
-
 function updateSelectedLabels(){
   const t = selectedTaskObj();
   if(!t){
@@ -776,14 +767,12 @@ function updateSelectedLabels(){
   }
   enforceStartLock();
 }
-
 function enforceStartLock(){
   const hasTask = !!selectedTaskObj();
   if(!hasTask){
     btnStart.disabled = true;
-    warningEl.innerHTML = `Choose a task before starting focus`;
+    warningEl.textContent = "Choose a task before starting focus";
   }else{
-    // only enable if not running
     if(!timer) btnStart.disabled = false;
     warningEl.textContent = "";
   }
@@ -796,9 +785,7 @@ function sessionsThisWeek(){
   const wk = weekKey(new Date());
   return sessions.filter(s => s.weekKey === wk);
 }
-
 function groupWeekly(slist){
-  // { project: { total, tasks: {taskName: minutes} } }
   const out = {};
   for(const s of slist){
     if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
@@ -808,53 +795,13 @@ function groupWeekly(slist){
   }
   return out;
 }
-
 function computeFocusedThisWeekMinutes(){
   const slist = sessionsThisWeek();
   let sum = 0;
   for(const s of slist) sum += s.minutes;
   return sum;
 }
-
-function renderWeeklyLog(){
-  const wk = weekKey(new Date());
-  const slist = sessionsThisWeek();
-  const grouped = groupWeekly(slist);
-
-  // Update header + focused minutes
-  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
-  const focusedMin = computeFocusedThisWeekMinutes();
-  focusedLabel.textContent = String(focusedMin);
-  goalLabel.textContent = String(goalMinutes());
-
-  // Render weekly grouped view
-  if(Object.keys(grouped).length === 0){
-    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
-  }else{
-    let html = "";
-    for(const project of PROJECTS){
-      if(!grouped[project]) continue;
-      const p = grouped[project];
-      html += `<div style="margin-bottom:10px;">
-        <div style="font-weight:900;">${project} — ${p.total} min</div>
-        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
-      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
-      for(const [taskName, mins] of taskEntries){
-        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
-          <span>${taskName}</span>
-          <b>${mins} min</b>
-        </div>`;
-      }
-      html += `</div></div>`;
-    }
-    weeklyLogEl.innerHTML = html;
-  }
-
-  renderPastWeeks();
-}
-
 function renderPastWeeks(){
-  // Build list of weekKeys excluding current, newest first
   const current = weekKey(new Date());
   const keys = Array.from(new Set(sessions.map(s => s.weekKey)))
     .filter(k => k !== current)
@@ -888,7 +835,40 @@ function renderPastWeeks(){
   }
   pastWeeksEl.innerHTML = html;
 }
+function renderWeeklyLog(){
+  const wk = weekKey(new Date());
+  const slist = sessionsThisWeek();
+  const grouped = groupWeekly(slist);
 
+  document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
+  const focusedMin = computeFocusedThisWeekMinutes();
+  focusedLabel.textContent = String(focusedMin);
+  goalLabel.textContent = String(goalMinutes());
+
+  if(Object.keys(grouped).length === 0){
+    weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
+  }else{
+    let html = "";
+    for(const project of PROJECTS){
+      if(!grouped[project]) continue;
+      const p = grouped[project];
+      html += `<div style="margin-bottom:10px;">
+        <div style="font-weight:900;">${project} — ${p.total} min</div>
+        <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
+      const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
+      for(const [taskName, mins] of taskEntries){
+        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
+          <span>${taskName}</span>
+          <b>${mins} min</b>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    weeklyLogEl.innerHTML = html;
+  }
+
+  renderPastWeeks();
+}
 function weeklySummaryText(){
   const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
@@ -989,14 +969,15 @@ function logFocusSession(minutes){
   saveJSON(STORAGE_SESSIONS, sessions);
   renderWeeklyLog();
 }
-  function logPartialFocusIfNeeded(){
+
+function logPartialFocusIfNeeded(){
   if(mode !== "focus") return;
   if(blockStartTs === null || focusStartedRemaining === null) return;
 
   const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
   const minutes = Math.round(elapsedSec / 60); // redondeo a minuto
   if(minutes >= 1){
-    logFocusSession(minutes); // reusa tu logger, pero ahora con minutos reales
+    logFocusSession(minutes); // ahora con minutos reales
   }
 
   // reset del tracking del bloque
@@ -1021,9 +1002,9 @@ function startTimer(){
   startPetals();
 
   if(blockStartTs === null){
-  blockStartTs = Date.now();
-  focusStartedRemaining = remaining;
-}
+    blockStartTs = Date.now();
+    focusStartedRemaining = remaining;
+  }
 
   lastTick = Date.now();
   timer = setInterval(() => {
@@ -1044,19 +1025,20 @@ function startTimer(){
       timer = null;
       lastTick = null;
 
-    if(mode === "focus"){
-  // log full focus block minutes to selected task/project
-  logFocusSession(focusMinutes());
+      if(mode === "focus"){
+        // log full focus block minutes to selected task/project
+        logFocusSession(focusMinutes());
 
-  // ✅ reset tracking de tiempo real
-  blockStartTs = null;
-  focusStartedRemaining = null;
+        // reset tracking de tiempo real
+        blockStartTs = null;
+        focusStartedRemaining = null;
 
-  pomos += 1;
-  setMode("break");
-}else{
-  setMode("focus");
-}
+        pomos += 1;
+        setMode("break");
+      }else{
+        setMode("focus");
+      }
+
       stopPetals();
       render();
       return;
@@ -1072,12 +1054,16 @@ function pauseTimer(){
   clearInterval(timer);
   timer = null;
   lastTick = null;
+
+  // log partial minutes if we were focusing
   logPartialFocusIfNeeded();
+
   stopPetals();
   render();
 }
 
 function stopToBlockStart(){
+  // stop = pause + volver al inicio del bloque actual
   pauseTimer();
   remaining = total;
   render();
@@ -1100,20 +1086,24 @@ btnStop.onclick = () => {
 };
 
 // Skip: advance block
-// - If skipping focus, count it as completed focus (and log minutes) by design
+// - If skipping focus, log partial focus minutes (if any) and advance
 btnSkip.onclick = () => {
   unlockAudioOnUserGesture();
+
+  // stop interval but keep current remaining to compute partial
   pauseTimer();
 
   if(mode === "focus"){
-  if(!selectedTaskObj()){
-    enforceStartLock();
-    return;
+    if(!selectedTaskObj()){
+      enforceStartLock();
+      return;
+    }
+    // time already logged by pauseTimer() via logPartialFocusIfNeeded()
+    pomos += 1;
+    setMode("break");
+  }else{
+    setMode("focus");
   }
-  pomos += 1;
-  setMode("break");
-}else{
-  setMode("focus");
 };
 
 btnReset.onclick = () => {
@@ -1152,7 +1142,7 @@ pastToggleEl.onclick = () => {
 
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
 
-    // ✅ si NO está corriendo, el reloj debe reflejar el bloque actual
+    // si NO está corriendo, el reloj debe reflejar el bloque actual
     if(!timer){
       if(mode === "focus"){
         total = focusMinutes() * 60;
@@ -1177,11 +1167,15 @@ pastToggleEl.onclick = () => {
 ========================= */
 const projectsRoot = document.getElementById("projectsRoot");
 
+function safeId(s){
+  return String(s).replace(/\W+/g,"_");
+}
+
 function renderSidebar(){
   let html = "";
   for(const project of PROJECTS){
     const tasks = tasksByProject[project] || [];
-    const addId = `add-${project.replace(/\W+/g,"_")}`;
+    const addId = `add-${safeId(project)}`;
 
     html += `<div class="project" data-project="${project}">
       <div class="project-head">
@@ -1224,8 +1218,8 @@ projectsRoot.addEventListener("click", (e) => {
   const project = el.getAttribute("data-project");
 
   if(action === "toggleAdd"){
-    const addId = `add-${project.replace(/\W+/g,"_")}`;
-    const row = document.getElementById(addId);
+    const row = document.getElementById(`add-${safeId(project)}`);
+    if(!row) return;
     row.classList.toggle("show");
     const inp = row.querySelector("input");
     setTimeout(()=>inp?.focus?.(), 0);
@@ -1233,10 +1227,10 @@ projectsRoot.addEventListener("click", (e) => {
   }
 
   if(action === "addTask"){
-    const addId = `add-${project.replace(/\W+/g,"_")}`;
-    const row = document.getElementById(addId);
+    const row = document.getElementById(`add-${safeId(project)}`);
+    if(!row) return;
     const inp = row.querySelector("input");
-    const name = (inp.value || "").trim();
+    const name = (inp?.value || "").trim();
     if(!name) return;
 
     tasksByProject[project].push({ id: uid(), name });
