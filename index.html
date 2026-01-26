@@ -54,7 +54,7 @@ body{
   background:var(--petal);
   border-radius:999px;
   opacity:.95;
-  filter: drop-shadow(0 14px 26px rgba(168,85,247,.28));
+  filter: drop-shadow(0 14px 26px rgba(168,85,247,.30));
   animation:
     fall var(--dur) linear forwards,
     sway var(--sway) ease-in-out infinite;
@@ -87,13 +87,14 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:18px;
+  gap:16px;
   padding:18px;
+  width:min(980px, 100%);
 }
 
 .top{
   display:flex;
-  gap:12px;
+  gap:10px;
   flex-wrap:wrap;
   justify-content:center;
 }
@@ -105,17 +106,30 @@ body{
   padding:10px 14px;
   font-size:13px;
   box-shadow:0 10px 30px rgba(0,0,0,.08);
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 
-.goal input{
-  width:56px;
+.pill b{font-weight:800}
+
+.pill input{
+  width:64px;
   border:none;
   outline:none;
   background:rgba(168,85,247,.10);
   border-radius:10px;
   padding:6px 8px;
   text-align:center;
-  font-weight:600;
+  font-weight:700;
+  color:#2b2b2b;
+}
+
+.pill input.small{ width:54px; }
+
+.pill input:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
 
 .ring{
@@ -138,17 +152,21 @@ body{
   align-items:center;
   justify-content:center;
   box-shadow:0 20px 50px rgba(0,0,0,.10);
+  text-align:center;
+  padding:14px;
 }
 
 .time{
   font-size:64px;
-  font-weight:800;
+  font-weight:900;
   letter-spacing:.5px;
+  line-height:1;
 }
+
 .sub{
   font-size:13px;
   opacity:.60;
-  margin-top:8px;
+  margin-top:10px;
 }
 
 .controls{
@@ -165,12 +183,24 @@ button{
   cursor:pointer;
   background:white;
   box-shadow:0 10px 30px rgba(0,0,0,.10);
-  font-weight:600;
+  font-weight:700;
+}
+
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
 
 .primary{
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   color:white;
+}
+
+.hint{
+  font-size:12px;
+  opacity:.65;
+  text-align:center;
+  max-width:520px;
 }
 
 @media (max-width:460px){
@@ -188,9 +218,46 @@ button{
   <!-- App -->
   <div class="app">
     <div class="top">
-      <div class="pill" id="plan">Focus 35 / break 10 (long 30 every 5)</div>
-      <div class="pill goal">Goal <input id="goal" type="number" min="1" max="30" value="8" /> pomos</div>
-      <div class="pill" id="count">Pomodoros: 0 / 8</div>
+      <div class="pill">
+        <b id="modeLabel">Focus</b>
+        <span id="planLabel">• editable schedule</span>
+      </div>
+
+      <div class="pill">
+        Goal (min)
+        <input id="goalMin" type="number" min="10" max="1200" value="240" />
+      </div>
+
+      <div class="pill">
+        Focused today:
+        <b id="focusedLabel">0</b>
+        <span>/</span>
+        <b id="goalLabel">240</b>
+        <span>min</span>
+      </div>
+    </div>
+
+    <div class="top">
+      <div class="pill">
+        Focus
+        <input id="focusMin" type="number" min="5" max="240" value="35" /> min
+      </div>
+
+      <div class="pill">
+        Break
+        <input id="shortBreakMin" type="number" min="1" max="90" value="10" /> min
+      </div>
+
+      <div class="pill">
+        Long
+        <input id="longBreakMin" type="number" min="5" max="180" value="30" /> min
+      </div>
+
+      <div class="pill">
+        Every
+        <input id="longEvery" class="small" type="number" min="2" max="12" value="5" />
+        pomos
+      </div>
     </div>
 
     <div class="ring" id="ring" style="--progress:0">
@@ -207,31 +274,40 @@ button{
       <button id="skip">Skip</button>
       <button id="reset">Reset</button>
     </div>
+
+    <div class="hint">
+      Pétalos + sonido solo mientras corre. Skip en Focus cuenta como bloque completado (para minutos y para el ciclo de long break).
+    </div>
   </div>
 
 <script>
-/* ===== Pomodoro config ===== */
-/* ===== Pomodoro config ===== */
-const FOCUS_MIN = 35;
-const SHORT_BREAK_MIN = 10;
-const LONG_BREAK_MIN = 30;
-const LONG_EVERY = 5;
-
-/* ===== State ===== */
+/* =========================
+   State + Elements
+========================= */
 let mode = "focus";         // "focus" | "break"
-let pomos = 0;              // completed focus blocks
-let total = FOCUS_MIN * 60;
-let remaining = total;
+let pomos = 0;              // completed focus blocks (for long-break schedule)
+let total = 35 * 60;        // current block total seconds
+let remaining = total;      // current block remaining seconds
 
 let timer = null;
 let lastTick = null;
 
-/* ===== Elements ===== */
+let focusedSecondsToday = 0; // daily progress in seconds
+
 const ring = document.getElementById("ring");
 const timeEl = document.getElementById("time");
 const subEl = document.getElementById("sub");
-const countEl = document.getElementById("count");
-const goalInput = document.getElementById("goal");
+const modeLabel = document.getElementById("modeLabel");
+const planLabel = document.getElementById("planLabel");
+
+const focusedLabel = document.getElementById("focusedLabel");
+const goalLabel = document.getElementById("goalLabel");
+
+const goalMinInput = document.getElementById("goalMin");
+const focusInput = document.getElementById("focusMin");
+const shortBreakInput = document.getElementById("shortBreakMin");
+const longBreakInput = document.getElementById("longBreakMin");
+const longEveryInput = document.getElementById("longEvery");
 
 const btnStart = document.getElementById("start");
 const btnPause = document.getElementById("pause");
@@ -239,7 +315,35 @@ const btnStop  = document.getElementById("stop");
 const btnSkip  = document.getElementById("skip");
 const btnReset = document.getElementById("reset");
 
-/* ===== Web Audio (no files) ===== */
+/* =========================
+   Helpers (inputs)
+========================= */
+function clampNum(v, min, max, fallback){
+  const n = Number(v);
+  if(!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function goalMinutes(){
+  return clampNum(goalMinInput.value, 10, 1200, 240);
+}
+function focusMinutes(){
+  return clampNum(focusInput.value, 5, 240, 35);
+}
+function shortBreakMinutes(){
+  return clampNum(shortBreakInput.value, 1, 90, 10);
+}
+function longBreakMinutes(){
+  return clampNum(longBreakInput.value, 5, 180, 30);
+}
+function longEvery(){
+  return clampNum(longEveryInput.value, 2, 12, 5);
+}
+
+/* =========================
+   Web Audio (code only)
+   (volume boosted)
+========================= */
 let audioCtx = null;
 
 function ensureAudio(){
@@ -254,7 +358,6 @@ function ensureAudio(){
 
 function unlockAudioOnUserGesture(){
   ensureAudio();
-  // Some embeds need resume() after a user gesture
   audioCtx?.resume?.().catch(()=>{});
 }
 
@@ -268,30 +371,31 @@ function playTick(){
   osc.type = "sine";
   osc.frequency.setValueAtTime(523.25, t0); // C5
 
+  // louder than before
   gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(0.10, t0 + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+  gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
 
   osc.connect(gain);
   gain.connect(audioCtx.destination);
 
   osc.start(t0);
-  osc.stop(t0 + 0.14);
+  osc.stop(t0 + 0.16);
 }
 
 function playChime(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
 
-  // Master gain (quiet)
+  // Master gain (boosted)
   const master = audioCtx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.exponentialRampToValueAtTime(0.20, t0 + 0.02);  // attack
-  master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.20); // decay
+  master.gain.exponentialRampToValueAtTime(0.32, t0 + 0.02);   // louder
+  master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.25);
   master.connect(audioCtx.destination);
 
-  // Soft 2-note chime (sine)
-  const freqs = [659.25, 880.00]; // E5 + A5
+  // Slightly richer: 3 notes
+  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -301,18 +405,20 @@ function playChime(){
 
     const start = t0 + i * 0.06;
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.55, start + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.85);
+    gain.gain.exponentialRampToValueAtTime(0.60, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.90);
 
     osc.connect(gain);
     gain.connect(master);
 
     osc.start(start);
-    osc.stop(start + 0.9);
+    osc.stop(start + 0.95);
   });
 }
 
-/* ===== Petal rain ===== */
+/* =========================
+   Petal rain (constant while running)
+========================= */
 let petalInterval = null;
 
 function spawnPetal(){
@@ -325,13 +431,13 @@ function spawnPetal(){
   const x = Math.random() * window.innerWidth;
   p.style.left = x + "px";
 
-  const dx = (Math.random() * 260 - 130);      // wider spread
+  const dx = (Math.random() * 280 - 140);      // wider spread
   const rot = (Math.random() * 720 - 360);
 
-  const dur = (Math.random() * 2.2 + 4.2).toFixed(2) + "s";  // 4.2–6.4s
+  const dur = (Math.random() * 2.2 + 4.0).toFixed(2) + "s";  // 4.0–6.2s
   const sway = (Math.random() * 1.3 + 1.0).toFixed(2) + "s";
 
-  const scale = (Math.random() * 0.9 + 0.9).toFixed(2);      // 0.9–1.8
+  const scale = (Math.random() * 0.9 + 0.95).toFixed(2);     // 0.95–1.85
   p.style.transform = `scale(${scale})`;
 
   p.style.setProperty("--dx", dx + "px");
@@ -345,8 +451,8 @@ function spawnPetal(){
 
 function startPetals(){
   if(petalInterval) return;
-  for(let i=0;i<10;i++) spawnPetal();          // instant presence
-  petalInterval = setInterval(spawnPetal, 260); // density
+  for(let i=0;i<10;i++) spawnPetal();
+  petalInterval = setInterval(spawnPetal, 240); // a bit denser
 }
 
 function stopPetals(){
@@ -354,36 +460,37 @@ function stopPetals(){
   petalInterval = null;
 }
 
-/* ===== Helpers ===== */
+/* =========================
+   Rendering + Mode logic
+========================= */
 function fmt(sec){
   const m = Math.floor(sec/60).toString().padStart(2,"0");
   const s = Math.floor(sec%60).toString().padStart(2,"0");
   return `${m}:${s}`;
 }
 
-function currentGoal(){
-  const g = Number(goalInput?.value || 8);
-  return (Number.isFinite(g) && g > 0) ? g : 8;
-}
-
 function nextBreakMins(nextPomo){
-  return (nextPomo % LONG_EVERY === 0) ? LONG_BREAK_MIN : SHORT_BREAK_MIN;
+  return (nextPomo % longEvery() === 0) ? longBreakMinutes() : shortBreakMinutes();
 }
 
 function setMode(newMode){
   mode = newMode;
 
   if(mode === "focus"){
-    total = FOCUS_MIN * 60;
+    total = focusMinutes() * 60;
     remaining = total;
+    modeLabel.textContent = "Focus";
     subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
   }else{
-    const mins = (pomos % LONG_EVERY === 0 && pomos !== 0) ? LONG_BREAK_MIN : SHORT_BREAK_MIN;
+    const isLong = (pomos % longEvery() === 0 && pomos !== 0);
+    const mins = isLong ? longBreakMinutes() : shortBreakMinutes();
     total = mins * 60;
     remaining = total;
-    subEl.textContent = `(next focus: ${FOCUS_MIN}m)`;
+    modeLabel.textContent = isLong ? "Long Break" : "Break";
+    subEl.textContent = `(next focus: ${focusMinutes()}m)`;
   }
 
+  planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
   render();
 }
 
@@ -393,20 +500,32 @@ function render(){
   const progress = 1 - (remaining / total);
   ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
 
-  countEl.textContent = `Pomodoros: ${pomos} / ${currentGoal()}`;
+  const focusedMin = Math.floor(focusedSecondsToday / 60);
+  focusedLabel.textContent = String(focusedMin);
 
-  // Optional: disable/enable buttons nicely
-  btnStart.disabled = !!timer;
-  btnPause.disabled = !timer;
+  const g = goalMinutes();
+  goalLabel.textContent = String(g);
+
+  // lock settings while running
+  const running = !!timer;
+  focusInput.disabled = running;
+  shortBreakInput.disabled = running;
+  longBreakInput.disabled = running;
+  longEveryInput.disabled = running;
+  goalMinInput.disabled = running;
+
+  btnStart.disabled = running;
+  btnPause.disabled = !running;
 }
 
-/* ===== Timer controls ===== */
+/* =========================
+   Timer controls
+========================= */
 function startTimer(){
   if(timer) return;
 
   unlockAudioOnUserGesture();
   playTick();
-
   startPetals();
 
   lastTick = Date.now();
@@ -423,25 +542,24 @@ function startTimer(){
       remaining = 0;
       render();
 
-      // End-of-block sound
       playChime();
 
-      // Stop running this block
+      // stop this block
       clearInterval(timer);
       timer = null;
       lastTick = null;
 
-      // Advance mode
+      // If finished a focus block, add minutes toward daily goal
       if(mode === "focus"){
+        focusedSecondsToday += focusMinutes() * 60;
         pomos += 1;
         setMode("break");
       }else{
         setMode("focus");
       }
 
-      // Petals only while actively running
+      // petals only while actively running
       stopPetals();
-
       render();
       return;
     }
@@ -466,7 +584,9 @@ function stopToBlockStart(){
   render();
 }
 
-/* ===== Buttons ===== */
+/* =========================
+   Buttons
+========================= */
 btnStart.onclick = startTimer;
 
 btnPause.onclick = () => {
@@ -479,30 +599,56 @@ btnStop.onclick = () => {
   stopToBlockStart();
 };
 
+// Skip: advance to next block
+// - If skipping focus, count it as completed focus (minutes + pomos)
 btnSkip.onclick = () => {
   unlockAudioOnUserGesture();
-
-  // Skip current block: focus counts, break doesn't
   pauseTimer();
-  if(mode === "focus") pomos += 1;
 
-  setMode(mode === "focus" ? "break" : "focus");
+  if(mode === "focus"){
+    focusedSecondsToday += focusMinutes() * 60;
+    pomos += 1;
+    setMode("break");
+  }else{
+    setMode("focus");
+  }
 };
 
 btnReset.onclick = () => {
   unlockAudioOnUserGesture();
   pauseTimer();
+  focusedSecondsToday = 0;
   pomos = 0;
   setMode("focus");
 };
 
-goalInput?.addEventListener("change", () => {
-  render();
+// If user changes values while not running, update labels + sub text
+[goalMinInput, focusInput, shortBreakInput, longBreakInput, longEveryInput].forEach(el => {
+  el.addEventListener("change", () => {
+    // normalize clamps visually
+    goalMinInput.value = goalMinutes();
+    focusInput.value = focusMinutes();
+    shortBreakInput.value = shortBreakMinutes();
+    longBreakInput.value = longBreakMinutes();
+    longEveryInput.value = longEvery();
+
+    // refresh texts depending on current mode
+    if(mode === "focus"){
+      subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
+    }else{
+      subEl.textContent = `(next focus: ${focusMinutes()}m)`;
+    }
+    planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
+    render();
+  });
 });
 
-/* ===== init ===== */
+/* =========================
+   Init
+========================= */
 setMode("focus");
 render();
 </script>
+
 </body>
 </html>
