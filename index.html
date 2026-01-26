@@ -211,6 +211,7 @@ button{
 
 <script>
 /* ===== Pomodoro config ===== */
+/* ===== Pomodoro config ===== */
 const FOCUS_MIN = 35;
 const SHORT_BREAK_MIN = 10;
 const LONG_BREAK_MIN = 30;
@@ -224,6 +225,92 @@ let remaining = total;
 
 let timer = null;
 let lastTick = null;
+
+/* ===== Elements ===== */
+const ring = document.getElementById("ring");
+const timeEl = document.getElementById("time");
+const subEl = document.getElementById("sub");
+const countEl = document.getElementById("count");
+const goalInput = document.getElementById("goal");
+
+const btnStart = document.getElementById("start");
+const btnPause = document.getElementById("pause");
+const btnStop  = document.getElementById("stop");
+const btnSkip  = document.getElementById("skip");
+const btnReset = document.getElementById("reset");
+
+/* ===== Web Audio (no files) ===== */
+let audioCtx = null;
+
+function ensureAudio(){
+  if(audioCtx) return true;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function unlockAudioOnUserGesture(){
+  ensureAudio();
+  // Some embeds need resume() after a user gesture
+  audioCtx?.resume?.().catch(()=>{});
+}
+
+function playTick(){
+  if(!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(523.25, t0); // C5
+
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(0.10, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start(t0);
+  osc.stop(t0 + 0.14);
+}
+
+function playChime(){
+  if(!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+
+  // Master gain (quiet)
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0.0001, t0);
+  master.gain.exponentialRampToValueAtTime(0.20, t0 + 0.02);  // attack
+  master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.20); // decay
+  master.connect(audioCtx.destination);
+
+  // Soft 2-note chime (sine)
+  const freqs = [659.25, 880.00]; // E5 + A5
+  freqs.forEach((f, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(f, t0);
+
+    const start = t0 + i * 0.06;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.55, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.85);
+
+    osc.connect(gain);
+    gain.connect(master);
+
+    osc.start(start);
+    osc.stop(start + 0.9);
+  });
+}
 
 /* ===== Petal rain ===== */
 let petalInterval = null;
@@ -258,7 +345,7 @@ function spawnPetal(){
 
 function startPetals(){
   if(petalInterval) return;
-  for(let i=0;i<10;i++) spawnPetal();          // instant "cute" presence
+  for(let i=0;i<10;i++) spawnPetal();          // instant presence
   petalInterval = setInterval(spawnPetal, 260); // density
 }
 
@@ -267,13 +354,7 @@ function stopPetals(){
   petalInterval = null;
 }
 
-/* ===== UI ===== */
-const ring = document.getElementById("ring");
-const timeEl = document.getElementById("time");
-const subEl = document.getElementById("sub");
-const countEl = document.getElementById("count");
-const goalInput = document.getElementById("goal");
-
+/* ===== Helpers ===== */
 function fmt(sec){
   const m = Math.floor(sec/60).toString().padStart(2,"0");
   const s = Math.floor(sec%60).toString().padStart(2,"0");
@@ -281,7 +362,7 @@ function fmt(sec){
 }
 
 function currentGoal(){
-  const g = Number(goalInput.value || 8);
+  const g = Number(goalInput?.value || 8);
   return (Number.isFinite(g) && g > 0) ? g : 8;
 }
 
@@ -308,19 +389,31 @@ function setMode(newMode){
 
 function render(){
   timeEl.textContent = fmt(remaining);
+
   const progress = 1 - (remaining / total);
   ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
+
   countEl.textContent = `Pomodoros: ${pomos} / ${currentGoal()}`;
+
+  // Optional: disable/enable buttons nicely
+  btnStart.disabled = !!timer;
+  btnPause.disabled = !timer;
 }
 
+/* ===== Timer controls ===== */
 function startTimer(){
   if(timer) return;
+
+  unlockAudioOnUserGesture();
+  playTick();
+
   startPetals();
 
   lastTick = Date.now();
   timer = setInterval(() => {
     const now = Date.now();
     const delta = Math.floor((now - lastTick) / 1000);
+
     if(delta >= 1){
       remaining -= delta;
       lastTick += delta * 1000;
@@ -330,10 +423,15 @@ function startTimer(){
       remaining = 0;
       render();
 
-      // auto-advance
+      // End-of-block sound
+      playChime();
+
+      // Stop running this block
       clearInterval(timer);
       timer = null;
+      lastTick = null;
 
+      // Advance mode
       if(mode === "focus"){
         pomos += 1;
         setMode("break");
@@ -341,9 +439,10 @@ function startTimer(){
         setMode("focus");
       }
 
-      // keep petals going only if we immediately continue running.
-      // We stop them because you asked: petals run while timer runs.
+      // Petals only while actively running
       stopPetals();
+
+      render();
       return;
     }
 
@@ -368,32 +467,40 @@ function stopToBlockStart(){
 }
 
 /* ===== Buttons ===== */
-document.getElementById("start").onclick = startTimer;
-document.getElementById("pause").onclick = pauseTimer;
+btnStart.onclick = startTimer;
 
-document.getElementById("stop").onclick = () => {
+btnPause.onclick = () => {
+  unlockAudioOnUserGesture();
+  pauseTimer();
+};
+
+btnStop.onclick = () => {
+  unlockAudioOnUserGesture();
   stopToBlockStart();
 };
 
-document.getElementById("skip").onclick = () => {
-  // Skip current block as completed (focus counts, break doesn't)
+btnSkip.onclick = () => {
+  unlockAudioOnUserGesture();
+
+  // Skip current block: focus counts, break doesn't
   pauseTimer();
   if(mode === "focus") pomos += 1;
+
   setMode(mode === "focus" ? "break" : "focus");
 };
 
-document.getElementById("reset").onclick = () => {
+btnReset.onclick = () => {
+  unlockAudioOnUserGesture();
   pauseTimer();
   pomos = 0;
   setMode("focus");
 };
 
-goalInput.addEventListener("change", () => {
-  // re-render count display
+goalInput?.addEventListener("change", () => {
   render();
 });
 
-/* init */
+/* ===== init ===== */
 setMode("focus");
 render();
 </script>
