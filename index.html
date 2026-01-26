@@ -12,136 +12,449 @@
       --muted:#a1a1b3;
       --accent:#a855f7;
       --accent2:#7c3aed;
+      --ringTrack: rgba(255,255,255,.08);
+      --glow: rgba(168,85,247,.18);
+      --good: rgba(34,197,94,.14);
+      --goodBorder: rgba(34,197,94,.28);
     }
 
     *{box-sizing:border-box}
     body{
       margin:0;
-      background:var(--bg);
+      background:radial-gradient(1200px 600px at 50% 45%, rgba(168,85,247,.12), transparent 55%), var(--bg);
       color:var(--text);
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       display:grid;
       place-items:center;
       height:100vh;
+      overflow:hidden;
     }
 
     .app{
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:24px;
+      gap:22px;
+      padding:24px;
+      width:min(920px, 100%);
+    }
+
+    .topline{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:min(720px, 100%);
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:14px;
+      background:rgba(16,16,26,.75);
+      border:1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(10px);
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .badge{
+      width:10px;height:10px;border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      box-shadow:0 0 0 6px var(--glow);
+    }
+
+    .pill strong{ color: var(--text); font-weight:650; }
+
+    .goalWrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .goalInput{
+      width:70px;
+      padding:8px 10px;
+      border-radius:12px;
+      background:rgba(16,16,26,.78);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      outline:none;
+      font-size:13px;
+      text-align:center;
     }
 
     .ring{
-      width:320px;
-      height:320px;
+      width:360px;
+      height:360px;
       border-radius:50%;
       background:
-        conic-gradient(var(--accent) calc(var(--progress) * 1turn),
-        rgba(255,255,255,.08) 0);
+        conic-gradient(var(--accent) calc(var(--progress) * 1turn), var(--ringTrack) 0);
       display:grid;
       place-items:center;
-      box-shadow: 0 0 0 12px rgba(168,85,247,.15) inset;
+      box-shadow: 0 0 0 14px var(--glow) inset;
+      transition: background 200ms linear;
     }
 
     .inner{
-      width:270px;
-      height:270px;
+      width:300px;
+      height:300px;
       border-radius:50%;
-      background:var(--panel);
+      background:rgba(16,16,26,.88);
+      border:1px solid rgba(255,255,255,.10);
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
       text-align:center;
+      box-shadow: 0 30px 70px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      position:relative;
     }
 
     .time{
-      font-size:64px;
-      font-weight:700;
+      font-size:74px;
+      font-weight:750;
       letter-spacing:.5px;
+      line-height:1;
     }
 
     .sub{
-      margin-top:8px;
+      margin-top:10px;
       color:var(--muted);
       font-size:14px;
     }
 
     .controls{
       display:flex;
-      gap:16px;
+      gap:12px;
+      flex-wrap:wrap;
+      justify-content:center;
     }
 
     button{
-      background:var(--panel);
-      border:1px solid rgba(255,255,255,.1);
+      background:rgba(16,16,26,.78);
+      border:1px solid rgba(255,255,255,.12);
       color:var(--text);
-      padding:10px 18px;
-      border-radius:12px;
+      padding:10px 16px;
+      border-radius:14px;
       cursor:pointer;
       font-size:14px;
+      min-width:92px;
+      backdrop-filter: blur(10px);
+      transition: transform .06s ease, opacity .2s ease;
     }
+    button:active{ transform: translateY(1px); }
+    button:hover{ opacity:.92; }
 
     button.primary{
       background:linear-gradient(135deg,var(--accent),var(--accent2));
       border:none;
+      box-shadow:0 10px 28px rgba(124,58,237,.22);
     }
 
-    button:hover{
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:4px;
       opacity:.9;
+      text-align:center;
+    }
+
+    .toast{
+      position:fixed;
+      top:18px;
+      left:50%;
+      transform:translateX(-50%);
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(16,16,26,.88);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .25s ease, transform .25s ease;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      z-index:9999;
+      max-width:min(520px, calc(100vw - 24px));
+    }
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(6px);
+    }
+    .toast.good{
+      border-color: var(--goodBorder);
+      background: linear-gradient(0deg, var(--good), rgba(16,16,26,.88));
+    }
+
+    .toast .dot{
+      width:10px;height:10px;border-radius:50%;
+      background:rgba(34,197,94,.9);
+      box-shadow:0 0 0 6px rgba(34,197,94,.15);
+    }
+
+    @media (max-width: 460px){
+      .ring{ width:320px; height:320px; }
+      .inner{ width:270px; height:270px; }
+      .time{ font-size:64px; }
     }
   </style>
 </head>
+
 <body>
+  <div class="toast" id="toast">
+    <span class="dot"></span>
+    <span id="toastText">Congrats!</span>
+  </div>
+
   <div class="app">
+    <div class="topline">
+      <div class="pill">
+        <span class="badge"></span>
+        <span id="modeLabel">Focus</span>
+        <span id="planLabel">35 / 10 (long 30 every 5)</span>
+      </div>
+
+      <div class="pill goalWrap">
+        <span>Daily goal</span>
+        <input class="goalInput" id="goalInput" type="number" min="1" max="30" step="1" />
+        <span style="opacity:.9">pomos</span>
+      </div>
+
+      <div class="pill">
+        <span id="countLabel">Pomodoros: 0</span>
+      </div>
+    </div>
+
     <div class="ring" id="ring" style="--progress:0">
       <div class="inner">
-        <div class="time" id="time">25:00</div>
-        <div class="sub">(1 / 6)</div>
+        <div class="time" id="time">35:00</div>
+        <div class="sub" id="sub">(next break: 10m)</div>
       </div>
     </div>
 
     <div class="controls">
+      <button class="primary" id="startPause">Start</button>
+      <button id="stop">Stop</button>
+      <button id="skip">Skip</button>
       <button id="reset">Reset</button>
-      <button class="primary" id="start">Start</button>
+    </div>
+
+    <div class="hint">
+      Start/Pause mantiene el tiempo. Stop detiene y vuelve al inicio del bloque actual.
     </div>
   </div>
 
   <script>
-    const TOTAL = 25 * 60;
-    let remaining = TOTAL;
+    // === Config ===
+    const FOCUS_MIN = 35;
+    const SHORT_BREAK_MIN = 10;
+    const LONG_BREAK_MIN = 30;
+    const LONG_EVERY = 5; // cada 5 pomodoros
+    const END_BEEP_MS = 180;
+
+    // Goal persistence (simple): localStorage
+    const GOAL_KEY = "pomo_daily_goal";
+    const GOAL_CONGRATS_KEY = "pomo_goal_congrats_shown"; // per browser session unless you reset
+
+    // === State ===
+    let mode = "focus"; // "focus" | "break"
+    let pomoCount = 0;  // focus blocks terminados
+    let total = FOCUS_MIN * 60;
+    let remaining = total;
     let timer = null;
+    let lastTick = null;
 
+    // === Elements ===
     const timeEl = document.getElementById("time");
-    const ring = document.getElementById("ring");
+    const ringEl = document.getElementById("ring");
+    const modeLabel = document.getElementById("modeLabel");
+    const countLabel = document.getElementById("countLabel");
+    const subEl = document.getElementById("sub");
+    const startPauseBtn = document.getElementById("startPause");
+    const goalInput = document.getElementById("goalInput");
+    const toast = document.getElementById("toast");
+    const toastText = document.getElementById("toastText");
 
-    function render(){
-      const m = Math.floor(remaining / 60).toString().padStart(2,"0");
-      const s = (remaining % 60).toString().padStart(2,"0");
-      timeEl.textContent = `${m}:${s}`;
-      ring.style.setProperty("--progress", 1 - remaining / TOTAL);
+    function fmt(sec){
+      const m = Math.floor(sec / 60).toString().padStart(2,"0");
+      const s = Math.floor(sec % 60).toString().padStart(2,"0");
+      return `${m}:${s}`;
     }
 
-    document.getElementById("start").onclick = () => {
-      if(timer) return;
-      timer = setInterval(() => {
-        remaining--;
-        if(remaining <= 0){
-          clearInterval(timer);
-          timer = null;
-        }
-        render();
-      }, 1000);
-    };
+    function getNextBreakMinutes(nextPomoCount){
+      return (nextPomoCount % LONG_EVERY === 0) ? LONG_BREAK_MIN : SHORT_BREAK_MIN;
+    }
 
-    document.getElementById("reset").onclick = () => {
+    function currentGoal(){
+      const g = Number(goalInput.value || 0);
+      return (Number.isFinite(g) && g > 0) ? g : 8;
+    }
+
+    function showToast(message){
+      toastText.textContent = message;
+      toast.classList.add("show","good");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 3200);
+    }
+
+    function maybeCongrats(){
+      const goal = currentGoal();
+      if(pomoCount >= goal){
+        const already = localStorage.getItem(GOAL_CONGRATS_KEY) === "1";
+        if(!already){
+          localStorage.setItem(GOAL_CONGRATS_KEY, "1");
+          showToast(`Congrats! 🎉 Goal reached: ${pomoCount}/${goal}`);
+          // optional: slightly change ring glow when goal reached
+          ringEl.style.boxShadow = "0 0 0 14px rgba(34,197,94,.18) inset";
+        }
+      }
+    }
+
+    function setMode(newMode){
+      mode = newMode;
+
+      if(mode === "focus"){
+        total = FOCUS_MIN * 60;
+        remaining = total;
+        modeLabel.textContent = "Focus";
+        subEl.textContent = `(next break: ${getNextBreakMinutes(pomoCount + 1)}m)`;
+      }else{
+        const mins = (pomoCount % LONG_EVERY === 0 && pomoCount !== 0) ? LONG_BREAK_MIN : SHORT_BREAK_MIN;
+        total = mins * 60;
+        remaining = total;
+        modeLabel.textContent = mins === LONG_BREAK_MIN ? "Long Break" : "Break";
+        subEl.textContent = `(next focus: ${FOCUS_MIN}m)`;
+      }
+      render();
+    }
+
+    function render(){
+      timeEl.textContent = fmt(remaining);
+      const progress = 1 - (remaining / total);
+      ringEl.style.setProperty("--progress", isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0);
+      countLabel.innerHTML = `Pomodoros: <strong>${pomoCount}</strong> / <strong>${currentGoal()}</strong>`;
+      startPauseBtn.textContent = timer ? "Pause" : "Start";
+    }
+
+    function beep(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = 740;
+        g.gain.value = 0.04;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        setTimeout(() => { o.stop(); ctx.close(); }, END_BEEP_MS);
+      }catch(e){}
+    }
+
+    function stopTimer(){
       clearInterval(timer);
       timer = null;
-      remaining = TOTAL;
+      lastTick = null;
+      render();
+    }
+
+    function startTimer(){
+      if(timer) return;
+
+      lastTick = Date.now();
+      timer = setInterval(() => {
+        const now = Date.now();
+        const delta = Math.floor((now - lastTick) / 1000);
+        if(delta >= 1){
+          remaining -= delta;
+          lastTick += delta * 1000;
+        }
+
+        if(remaining <= 0){
+          remaining = 0;
+          render();
+          beep();
+          stopTimer();
+
+          if(mode === "focus"){
+            pomoCount += 1;
+            maybeCongrats();
+            setMode("break");
+          }else{
+            setMode("focus");
+          }
+          return;
+        }
+
+        render();
+      }, 250);
+
+      render();
+    }
+
+    // === Buttons ===
+    document.getElementById("startPause").onclick = () => {
+      if(timer) stopTimer();
+      else startTimer();
+    };
+
+    // Stop: detiene y vuelve al inicio del bloque actual
+    document.getElementById("stop").onclick = () => {
+      stopTimer();
+      remaining = total;
       render();
     };
 
+    // Skip: pasa al siguiente bloque (cuenta foco como terminado si lo saltas)
+    document.getElementById("skip").onclick = () => {
+      stopTimer();
+      if(mode === "focus"){
+        pomoCount += 1;
+        maybeCongrats();
+        setMode("break");
+      }else{
+        setMode("focus");
+      }
+    };
+
+    // Reset: vuelve TODO a 0 pomos y focus 35:00
+    document.getElementById("reset").onclick = () => {
+      stopTimer();
+      pomoCount = 0;
+      localStorage.removeItem(GOAL_CONGRATS_KEY);
+      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.18) inset";
+      setMode("focus");
+    };
+
+    // === Goal input persistence ===
+    function loadGoal(){
+      const stored = Number(localStorage.getItem(GOAL_KEY));
+      const goal = (Number.isFinite(stored) && stored > 0) ? stored : 8;
+      goalInput.value = goal;
+    }
+    goalInput.addEventListener("change", () => {
+      const g = Math.max(1, Math.min(30, Number(goalInput.value || 8)));
+      goalInput.value = g;
+      localStorage.setItem(GOAL_KEY, String(g));
+      // si bajaste el goal por debajo del count, permite re-trigger al reset
+      localStorage.removeItem(GOAL_CONGRATS_KEY);
+      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.18) inset";
+      render();
+    });
+
+    // init
+    loadGoal();
+    setMode("focus");
     render();
   </script>
 </body>
