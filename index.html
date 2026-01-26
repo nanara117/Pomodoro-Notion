@@ -6,22 +6,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --bg:#0b0b12;
-      --panel:#10101a;
-      --text:#f4f4fa;
-      --muted:#a1a1b3;
+      /* Light botanical base */
+      --bg:#fbfaf7;                 /* crema clarita */
+      --panel:#ffffff;              /* tarjetas */
+      --text:#2b2b2b;
+      --muted:#6f6f78;
+
+      /* Purple accents (ring + background design) */
       --accent:#a855f7;
       --accent2:#7c3aed;
-      --ringTrack: rgba(255,255,255,.08);
-      --glow: rgba(168,85,247,.18);
-      --good: rgba(34,197,94,.14);
-      --goodBorder: rgba(34,197,94,.28);
+
+      /* Ring track + glow */
+      --ringTrack: rgba(60, 36, 92, .10);
+      --glow: rgba(168,85,247,.12);
+
+      /* Daisy cream */
+      --daisy:#f4efe6;
+      --daisy2:#efe6d8;
+
+      /* Congrats tint */
+      --good: rgba(34,197,94,.12);
+      --goodBorder: rgba(34,197,94,.26);
     }
 
     *{box-sizing:border-box}
+
     body{
       margin:0;
-      background:radial-gradient(1200px 600px at 50% 45%, rgba(168,85,247,.12), transparent 55%), var(--bg);
+      background:
+        radial-gradient(900px 500px at 15% 20%, rgba(168,85,247,.16), transparent 55%),
+        radial-gradient(800px 520px at 85% 30%, rgba(124,58,237,.12), transparent 60%),
+        radial-gradient(900px 520px at 55% 95%, rgba(168,85,247,.10), transparent 60%),
+        var(--bg);
       color:var(--text);
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       display:grid;
@@ -37,6 +53,8 @@
       gap:22px;
       padding:24px;
       width:min(920px, 100%);
+      position:relative;
+      z-index:2;
     }
 
     .topline{
@@ -54,11 +72,12 @@
       gap:10px;
       padding:10px 14px;
       border-radius:14px;
-      background:rgba(16,16,26,.75);
-      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(40, 30, 60, .10);
       backdrop-filter: blur(10px);
       color:var(--muted);
       font-size:13px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.05);
     }
 
     .badge{
@@ -79,12 +98,13 @@
       width:70px;
       padding:8px 10px;
       border-radius:12px;
-      background:rgba(16,16,26,.78);
-      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.9);
+      border:1px solid rgba(40, 30, 60, .12);
       color:var(--text);
       outline:none;
       font-size:13px;
       text-align:center;
+      box-shadow: 0 10px 28px rgba(0,0,0,.04);
     }
 
     .ring{
@@ -96,21 +116,21 @@
       display:grid;
       place-items:center;
       box-shadow: 0 0 0 14px var(--glow) inset;
-      transition: background 200ms linear;
+      transition: background 200ms linear, box-shadow 200ms ease;
     }
 
     .inner{
       width:300px;
       height:300px;
       border-radius:50%;
-      background:rgba(16,16,26,.88);
-      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(40, 30, 60, .10);
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
       text-align:center;
-      box-shadow: 0 30px 70px rgba(0,0,0,.35);
+      box-shadow: 0 30px 70px rgba(0,0,0,.10);
       backdrop-filter: blur(10px);
       position:relative;
     }
@@ -136,8 +156,8 @@
     }
 
     button{
-      background:rgba(16,16,26,.78);
-      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(40, 30, 60, .12);
       color:var(--text);
       padding:10px 16px;
       border-radius:14px;
@@ -145,6 +165,7 @@
       font-size:14px;
       min-width:92px;
       backdrop-filter: blur(10px);
+      box-shadow: 0 12px 38px rgba(0,0,0,.05);
       transition: transform .06s ease, opacity .2s ease;
     }
     button:active{ transform: translateY(1px); }
@@ -153,7 +174,8 @@
     button.primary{
       background:linear-gradient(135deg,var(--accent),var(--accent2));
       border:none;
-      box-shadow:0 10px 28px rgba(124,58,237,.22);
+      color:#fff;
+      box-shadow:0 14px 34px rgba(124,58,237,.18);
     }
 
     .hint{
@@ -164,6 +186,7 @@
       text-align:center;
     }
 
+    /* Toast */
     .toast{
       position:fixed;
       top:18px;
@@ -171,11 +194,11 @@
       transform:translateX(-50%);
       padding:12px 14px;
       border-radius:14px;
-      background:rgba(16,16,26,.88);
-      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(40, 30, 60, .12);
       color:var(--text);
       backdrop-filter: blur(10px);
-      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      box-shadow: 0 20px 60px rgba(0,0,0,.10);
       opacity:0;
       pointer-events:none;
       transition: opacity .25s ease, transform .25s ease;
@@ -191,13 +214,68 @@
     }
     .toast.good{
       border-color: var(--goodBorder);
-      background: linear-gradient(0deg, var(--good), rgba(16,16,26,.88));
+      background: linear-gradient(0deg, var(--good), rgba(255,255,255,.88));
     }
 
     .toast .dot{
       width:10px;height:10px;border-radius:50%;
       background:rgba(34,197,94,.9);
       box-shadow:0 0 0 6px rgba(34,197,94,.15);
+    }
+
+    /* Daisy layer */
+    .daisy-layer{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .daisy{
+      position:absolute;
+      width:190px;
+      height:190px;
+      opacity:.55;
+      transform-origin: 50% 50%;
+    }
+
+    .daisy .petals ellipse{
+      fill: var(--daisy);
+      stroke: rgba(120, 90, 160, .09);
+      stroke-width: 1.2;
+    }
+
+    .daisy .center{
+      fill: var(--daisy2);
+      opacity:.85;
+    }
+
+    /* positions */
+    .d1{ top:-40px; left:-40px; transform: rotate(-12deg); }
+    .d2{ bottom:-50px; right:-50px; transform: rotate(18deg); width:220px; height:220px; opacity:.45; }
+    .d3{ top:32px; right:-60px; transform: rotate(8deg); width:160px; height:160px; opacity:.35; }
+    .d4{ bottom:28px; left:-70px; transform: rotate(-6deg); width:170px; height:170px; opacity:.32; }
+
+    /* Animations ONLY when running */
+    @keyframes floaty {
+      0%   { transform: translate(0,0) rotate(var(--r)); }
+      50%  { transform: translate(0,-10px) rotate(calc(var(--r) + 3deg)); }
+      100% { transform: translate(0,0) rotate(var(--r)); }
+    }
+
+    @keyframes petalWiggle {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+
+    body.running .d1{ --r:-12deg; animation: floaty 3.6s ease-in-out infinite; }
+    body.running .d2{ --r:18deg;  animation: floaty 4.4s ease-in-out infinite; }
+    body.running .d3{ --r:8deg;   animation: floaty 3.9s ease-in-out infinite; }
+    body.running .d4{ --r:-6deg;  animation: floaty 4.7s ease-in-out infinite; }
+
+    body.running .daisy .petals{
+      animation: petalWiggle 1.8s ease-in-out infinite;
     }
 
     @media (max-width: 460px){
@@ -209,6 +287,73 @@
 </head>
 
 <body>
+  <!-- Daisy layer -->
+  <div class="daisy-layer" aria-hidden="true">
+    <svg class="daisy d1" viewBox="0 0 120 120">
+      <g>
+        <circle cx="60" cy="60" r="16" class="center"/>
+        <g class="petals">
+          <ellipse cx="60" cy="18" rx="10" ry="18"/>
+          <ellipse cx="60" cy="102" rx="10" ry="18"/>
+          <ellipse cx="18" cy="60" rx="18" ry="10"/>
+          <ellipse cx="102" cy="60" rx="18" ry="10"/>
+          <ellipse cx="32" cy="32" rx="12" ry="18" transform="rotate(-45 32 32)"/>
+          <ellipse cx="88" cy="32" rx="12" ry="18" transform="rotate(45 88 32)"/>
+          <ellipse cx="32" cy="88" rx="12" ry="18" transform="rotate(45 32 88)"/>
+          <ellipse cx="88" cy="88" rx="12" ry="18" transform="rotate(-45 88 88)"/>
+        </g>
+      </g>
+    </svg>
+
+    <svg class="daisy d2" viewBox="0 0 120 120">
+      <g>
+        <circle cx="60" cy="60" r="14" class="center"/>
+        <g class="petals">
+          <ellipse cx="60" cy="18" rx="9" ry="16"/>
+          <ellipse cx="60" cy="102" rx="9" ry="16"/>
+          <ellipse cx="18" cy="60" rx="16" ry="9"/>
+          <ellipse cx="102" cy="60" rx="16" ry="9"/>
+          <ellipse cx="34" cy="34" rx="11" ry="16" transform="rotate(-45 34 34)"/>
+          <ellipse cx="86" cy="34" rx="11" ry="16" transform="rotate(45 86 34)"/>
+          <ellipse cx="34" cy="86" rx="11" ry="16" transform="rotate(45 34 86)"/>
+          <ellipse cx="86" cy="86" rx="11" ry="16" transform="rotate(-45 86 86)"/>
+        </g>
+      </g>
+    </svg>
+
+    <svg class="daisy d3" viewBox="0 0 120 120">
+      <g>
+        <circle cx="60" cy="60" r="13" class="center"/>
+        <g class="petals">
+          <ellipse cx="60" cy="18" rx="8" ry="15"/>
+          <ellipse cx="60" cy="102" rx="8" ry="15"/>
+          <ellipse cx="18" cy="60" rx="15" ry="8"/>
+          <ellipse cx="102" cy="60" rx="15" ry="8"/>
+          <ellipse cx="34" cy="34" rx="10" ry="15" transform="rotate(-45 34 34)"/>
+          <ellipse cx="86" cy="34" rx="10" ry="15" transform="rotate(45 86 34)"/>
+          <ellipse cx="34" cy="86" rx="10" ry="15" transform="rotate(45 34 86)"/>
+          <ellipse cx="86" cy="86" rx="10" ry="15" transform="rotate(-45 86 86)"/>
+        </g>
+      </g>
+    </svg>
+
+    <svg class="daisy d4" viewBox="0 0 120 120">
+      <g>
+        <circle cx="60" cy="60" r="13" class="center"/>
+        <g class="petals">
+          <ellipse cx="60" cy="18" rx="8" ry="15"/>
+          <ellipse cx="60" cy="102" rx="8" ry="15"/>
+          <ellipse cx="18" cy="60" rx="15" ry="8"/>
+          <ellipse cx="102" cy="60" rx="15" ry="8"/>
+          <ellipse cx="34" cy="34" rx="10" ry="15" transform="rotate(-45 34 34)"/>
+          <ellipse cx="86" cy="34" rx="10" ry="15" transform="rotate(45 86 34)"/>
+          <ellipse cx="34" cy="86" rx="10" ry="15" transform="rotate(45 34 86)"/>
+          <ellipse cx="86" cy="86" rx="10" ry="15" transform="rotate(-45 86 86)"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
   <div class="toast" id="toast">
     <span class="dot"></span>
     <span id="toastText">Congrats!</span>
@@ -258,11 +403,10 @@
     const SHORT_BREAK_MIN = 10;
     const LONG_BREAK_MIN = 30;
     const LONG_EVERY = 5; // cada 5 pomodoros
-    const END_BEEP_MS = 180;
 
     // Goal persistence (simple): localStorage
     const GOAL_KEY = "pomo_daily_goal";
-    const GOAL_CONGRATS_KEY = "pomo_goal_congrats_shown"; // per browser session unless you reset
+    const GOAL_CONGRATS_KEY = "pomo_goal_congrats_shown"; // per session until Reset
 
     // === State ===
     let mode = "focus"; // "focus" | "break"
@@ -282,6 +426,10 @@
     const goalInput = document.getElementById("goalInput");
     const toast = document.getElementById("toast");
     const toastText = document.getElementById("toastText");
+
+    function setRunning(isRunning){
+      document.body.classList.toggle("running", !!isRunning);
+    }
 
     function fmt(sec){
       const m = Math.floor(sec / 60).toString().padStart(2,"0");
@@ -314,8 +462,7 @@
         if(!already){
           localStorage.setItem(GOAL_CONGRATS_KEY, "1");
           showToast(`Congrats! 🎉 Goal reached: ${pomoCount}/${goal}`);
-          // optional: slightly change ring glow when goal reached
-          ringEl.style.boxShadow = "0 0 0 14px rgba(34,197,94,.18) inset";
+          ringEl.style.boxShadow = "0 0 0 14px rgba(34,197,94,.16) inset";
         }
       }
     }
@@ -346,31 +493,20 @@
       startPauseBtn.textContent = timer ? "Pause" : "Start";
     }
 
-    function beep(){
-      try{
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = "sine";
-        o.frequency.value = 740;
-        g.gain.value = 0.04;
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.start();
-        setTimeout(() => { o.stop(); ctx.close(); }, END_BEEP_MS);
-      }catch(e){}
-    }
-
     function stopTimer(){
       clearInterval(timer);
       timer = null;
       lastTick = null;
+      setRunning(false);
       render();
     }
 
     function startTimer(){
       if(timer) return;
 
+      setRunning(true);
+
+      // delta-time so it doesn't drift
       lastTick = Date.now();
       timer = setInterval(() => {
         const now = Date.now();
@@ -383,7 +519,6 @@
         if(remaining <= 0){
           remaining = 0;
           render();
-          beep();
           stopTimer();
 
           if(mode === "focus"){
@@ -432,7 +567,7 @@
       stopTimer();
       pomoCount = 0;
       localStorage.removeItem(GOAL_CONGRATS_KEY);
-      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.18) inset";
+      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.12) inset";
       setMode("focus");
     };
 
@@ -446,9 +581,8 @@
       const g = Math.max(1, Math.min(30, Number(goalInput.value || 8)));
       goalInput.value = g;
       localStorage.setItem(GOAL_KEY, String(g));
-      // si bajaste el goal por debajo del count, permite re-trigger al reset
       localStorage.removeItem(GOAL_CONGRATS_KEY);
-      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.18) inset";
+      ringEl.style.boxShadow = "0 0 0 14px rgba(168,85,247,.12) inset";
       render();
     });
 
