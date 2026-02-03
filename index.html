@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Notion Focus Tracker</title>
+<title>Notion Pomodoro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
@@ -150,27 +150,6 @@ body{
 .pill input.small{ width:54px; }
 .pill input:disabled{ opacity:.55; cursor:not-allowed; }
 
-/* ===== Toggle ===== */
-.mode-toggle{
-  display:flex;
-  gap:8px;
-  align-items:center;
-}
-.togglebtn{
-  border:1px solid rgba(168,85,247,.18);
-  background: rgba(168,85,247,.10);
-  border-radius:12px;
-  padding:8px 12px;
-  cursor:pointer;
-  font-weight:900;
-  user-select:none;
-}
-.togglebtn.active{
-  background: linear-gradient(135deg,var(--accent),var(--accent2));
-  color:#fff;
-  border-color: rgba(168,85,247,.35);
-}
-
 /* ===== Sidebar UI ===== */
 .sb-top{
   display:flex;
@@ -198,6 +177,34 @@ body{
   font-weight:900;
 }
 
+/* project add row (top) */
+.projectAddRow{
+  display:none;
+  gap:8px;
+  margin:10px 0 12px;
+}
+.projectAddRow.show{ display:flex; }
+.projectAddRow input{
+  flex:1;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(255,255,255,.90);
+  border-radius:12px;
+  padding:10px 10px;
+  outline:none;
+  font-weight:650;
+}
+.projectAddRow button{
+  border:none;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:900;
+  background: linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+  box-shadow:0 12px 26px rgba(168,85,247,.18);
+}
+
+/* project cards */
 .project{
   border:1px solid rgba(168,85,247,.14);
   background: rgba(255,255,255,.72);
@@ -216,6 +223,9 @@ body{
 .project-name{
   font-weight:900;
   font-size:13px;
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 .project-actions{
   display:flex;
@@ -233,6 +243,19 @@ body{
   display:grid;
   place-items:center;
 }
+
+.dangerbtn{
+  width:30px; height:30px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.85);
+  cursor:pointer;
+  font-weight:900;
+  display:grid;
+  place-items:center;
+  opacity:.85;
+}
+.dangerbtn:hover{ opacity:1; }
 
 .tasklist{
   margin-top:8px;
@@ -258,6 +281,25 @@ body{
   color: var(--muted);
   font-weight:600;
 }
+
+.task .taskActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.tdel{
+  width:26px; height:26px;
+  border-radius:10px;
+  border:1px solid rgba(168,85,247,.14);
+  background: rgba(255,255,255,.75);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  opacity:.8;
+}
+.tdel:hover{ opacity:1; }
 
 .task.active{
   border-color: rgba(168,85,247,.55);
@@ -441,36 +483,38 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   <div class="petal-layer" id="petalLayer"></div>
 
   <div class="shell" id="shell">
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sb-top">
         <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
-        <div class="sidebar-inner" style="flex:1;">
+
+        <div class="sidebar-inner" style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px;">
           <div class="sb-title">Projects & Tasks</div>
+          <button class="plusbtn" id="addProjectBtn" title="Add project">+</button>
         </div>
+
         <div style="width:38px;"></div>
+      </div>
+
+      <div class="sidebar-inner projectAddRow" id="projectAddRow">
+        <input id="projectNameInput" type="text" placeholder="New project…" />
+        <button id="projectAddConfirm">Add</button>
       </div>
 
       <div class="sidebar-inner" id="projectsRoot"></div>
 
       <div class="sidebar-inner mini">
-        Tip: selecciona una tarea y luego Start/Clock In. Tus minutos se guardan por semana y quedan en historial.
+        Tip: selecciona una tarea y luego Start. Tus minutos se guardan por semana y quedan en historial.
       </div>
     </aside>
 
+    <!-- Main -->
     <main class="main">
       <div class="app">
-
-        <!-- Row 1: Toggle + Goal -->
         <div class="top">
-          <div class="pill mode-toggle">
-            <span style="font-weight:900;">Mode:</span>
-            <span class="togglebtn active" id="btnClock">Clock</span>
-            <span class="togglebtn" id="btnPomo">Pomodoro</span>
-          </div>
-
           <div class="pill">
-            <b id="modeLabel">Clock</b>
-            <span id="planLabel">• clock in/out</span>
+            <b id="modeLabel">Focus</b>
+            <span id="planLabel">• editable schedule</span>
           </div>
 
           <div class="pill">
@@ -487,15 +531,13 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
           </div>
         </div>
 
-        <!-- Row 2: Pomodoro inputs (hidden in Clock mode) -->
-        <div class="top" id="pomoSettingsRow" style="display:none;">
+        <div class="top">
           <div class="pill">Focus <input id="focusMin" type="number" min="5" max="240" value="35" /> min</div>
           <div class="pill">Break <input id="shortBreakMin" type="number" min="1" max="90" value="10" /> min</div>
           <div class="pill">Long <input id="longBreakMin" type="number" min="5" max="180" value="30" /> min</div>
           <div class="pill">Every <input id="longEvery" class="small" type="number" min="2" max="12" value="5" /> pomos</div>
         </div>
 
-        <!-- Task label -->
         <div class="pill" style="max-width:860px; width:100%; justify-content:space-between;">
           <div>
             <b>Working on:</b>
@@ -504,26 +546,23 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
           <small id="currentProjectLabel" style="color:rgba(0,0,0,.5); font-weight:700;">—</small>
         </div>
 
-        <!-- Ring -->
         <div class="ring" id="ring" style="--progress:0">
           <div class="inner">
-            <div class="time" id="time">00:00</div>
-            <div class="sub" id="sub">Clock mode • ready</div>
+            <div class="time" id="time">35:00</div>
+            <div class="sub" id="sub">(next break: 10m)</div>
           </div>
         </div>
 
-        <!-- Controls -->
         <div class="controls">
-          <button class="primary" id="start">Clock In</button>
-          <button id="pause" disabled>Pause</button>
-          <button id="stop">Clock Out</button>
-          <button id="skip" style="display:none;">Skip</button>
+          <button class="primary" id="start">Start</button>
+          <button id="pause">Pause</button>
+          <button id="stop">Stop</button>
+          <button id="skip">Skip</button>
           <button id="reset">Reset</button>
         </div>
 
         <div class="warning" id="warning"></div>
 
-        <!-- Log -->
         <div class="panel logbox" id="logPanel">
           <div class="loghead">
             <div class="logtitle" id="logTitle">🗓 Focus log — This week</div>
@@ -545,27 +584,21 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
 
 <script>
 /* =========================
-   Projects (fixed) + Storage
+   Storage Keys
 ========================= */
-const PROJECTS = [
-  "Work (Celeste)",
-  "Work (Lenny)",
-  "Estudios",
-  "Practica",
-  "Portafolio",
-  "Proyecto"
-];
-
-const STORAGE_TASKS = "pomo_tasks_v1";
+const STORAGE_PROJECTS = "pomo_projects_v2";
 const STORAGE_SESSIONS = "pomo_sessions_v1";
-const STORAGE_UI = "pomo_ui_v1";
+const STORAGE_UI = "pomo_ui_v2";
 const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
 
-function uid(){
-  return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
+/* =========================
+   Helpers
+========================= */
+function uid(prefix="id"){
+  return prefix + "_" + Math.random().toString(36).slice(2,10) + "_" + Date.now().toString(36);
 }
-function safeId(str){
-  return String(str).replace(/\W+/g,"_");
+function safeDomId(str){
+  return String(str).toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9\-_]/g,"");
 }
 function loadJSON(key, fallback){
   try{
@@ -578,6 +611,11 @@ function loadJSON(key, fallback){
 }
 function saveJSON(key, value){
   localStorage.setItem(key, JSON.stringify(value));
+}
+function clampNum(v, min, max, fallback){
+  const n = Number(v);
+  if(!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
 }
 
 /* =========================
@@ -606,21 +644,55 @@ function prettyWeekLabel(key){
 }
 
 /* =========================
-   Data: tasks + sessions
+   Data: Projects (dynamic) + Migration
 ========================= */
-let tasksByProject = loadJSON(STORAGE_TASKS, null);
-if(!tasksByProject){
-  tasksByProject = {};
-  PROJECTS.forEach(p => tasksByProject[p] = []);
-  saveJSON(STORAGE_TASKS, tasksByProject);
-}else{
-  PROJECTS.forEach(p => { if(!tasksByProject[p]) tasksByProject[p] = []; });
+function defaultProjects(){
+  return [
+    { id: uid("proj"), name: "Work (Celeste)", tasks: [] },
+    { id: uid("proj"), name: "Work (Lenny)", tasks: [] },
+    { id: uid("proj"), name: "Estudios", tasks: [] },
+    { id: uid("proj"), name: "Practica", tasks: [] },
+    { id: uid("proj"), name: "Portafolio", tasks: [] },
+    { id: uid("proj"), name: "Proyecto", tasks: [] },
+  ];
 }
 
-let sessions = loadJSON(STORAGE_SESSIONS, []);
-// { ts, weekKey, project, taskId, taskName, minutes }
+function migrateIfNeeded(){
+  // If v2 exists, use it
+  const v2 = loadJSON(STORAGE_PROJECTS, null);
+  if(v2 && Array.isArray(v2)) return v2;
 
-let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
+  // Try migrate from old v1 structure if present
+  const oldTasks = loadJSON("pomo_tasks_v1", null); // { "Project": [ {id,name} ] }
+  if(oldTasks && typeof oldTasks === "object"){
+    const out = [];
+    for(const [projName, tasks] of Object.entries(oldTasks)){
+      out.push({
+        id: uid("proj"),
+        name: projName,
+        tasks: Array.isArray(tasks) ? tasks.map(t => ({ id: t.id || uid("task"), name: t.name || "Untitled task" })) : []
+      });
+    }
+    if(out.length){
+      saveJSON(STORAGE_PROJECTS, out);
+      return out;
+    }
+  }
+
+  // Otherwise create defaults
+  const def = defaultProjects();
+  saveJSON(STORAGE_PROJECTS, def);
+  return def;
+}
+
+let projects = migrateIfNeeded();
+
+/* sessions remain the same shape */
+let sessions = loadJSON(STORAGE_SESSIONS, []);
+// session: { ts, weekKey, projectId, projectName, taskId, taskName, minutes }
+
+/* Selected */
+let selected = loadJSON(STORAGE_UI, { projectId:null, taskId:null });
 function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
 /* =========================
@@ -658,18 +730,15 @@ const btnStop  = document.getElementById("stop");
 const btnSkip  = document.getElementById("skip");
 const btnReset = document.getElementById("reset");
 
-const btnClock = document.getElementById("btnClock");
-const btnPomo  = document.getElementById("btnPomo");
-const pomoSettingsRow = document.getElementById("pomoSettingsRow");
+/* project add controls */
+const addProjectBtn = document.getElementById("addProjectBtn");
+const projectAddRow = document.getElementById("projectAddRow");
+const projectNameInput = document.getElementById("projectNameInput");
+const projectAddConfirm = document.getElementById("projectAddConfirm");
 
 /* =========================
-   Clamp helpers
+   Pomodoro config inputs
 ========================= */
-function clampNum(v, min, max, fallback){
-  const n = Number(v);
-  if(!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, n));
-}
 function goalMinutes(){ return clampNum(goalMinInput.value, 10, 1200, 240); }
 function focusMinutes(){ return clampNum(focusInput.value, 5, 240, 35); }
 function shortBreakMinutes(){ return clampNum(shortBreakInput.value, 1, 90, 10); }
@@ -677,7 +746,7 @@ function longBreakMinutes(){ return clampNum(longBreakInput.value, 5, 180, 30); 
 function longEvery(){ return clampNum(longEveryInput.value, 2, 12, 5); }
 
 /* =========================
-   Web Audio (LOUDER)
+   Web Audio (code only) - louder
 ========================= */
 let audioCtx = null;
 
@@ -692,35 +761,31 @@ function unlockAudioOnUserGesture(){
   ensureAudio();
   audioCtx?.resume?.().catch(()=>{});
 }
-
-// louder tick
 function playTick(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, t0); // C5
+  osc.frequency.setValueAtTime(523.25, t0);
   gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.01); // louder
-  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+  gain.gain.exponentialRampToValueAtTime(0.24, t0 + 0.01); // louder
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start(t0);
-  osc.stop(t0 + 0.2);
+  osc.stop(t0 + 0.16);
 }
-
-// louder chime
 function playChime(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const master = audioCtx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02); // louder
-  master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.35);
+  master.gain.exponentialRampToValueAtTime(0.50, t0 + 0.02); // louder
+  master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.25);
   master.connect(audioCtx.destination);
 
-  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
+  const freqs = [659.25, 880.00, 987.77];
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -729,11 +794,11 @@ function playChime(){
     const start = t0 + i * 0.06;
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(0.85, start + 0.01); // louder
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.95);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.90);
     osc.connect(gain);
     gain.connect(master);
     osc.start(start);
-    osc.stop(start + 1.0);
+    osc.stop(start + 0.95);
   });
 }
 
@@ -766,6 +831,7 @@ function spawnPetal(){
   layer.appendChild(p);
   setTimeout(() => p.remove(), 9000);
 }
+
 function startPetals(){
   if(petalInterval) return;
   for(let i=0;i<10;i++) spawnPetal();
@@ -777,21 +843,43 @@ function stopPetals(){
 }
 
 /* =========================
-   Task selection helpers
+   Timer state
 ========================= */
+let mode = "focus";
+let pomos = 0;
+let total = focusMinutes() * 60;
+let remaining = total;
+
+let timer = null;
+let lastTick = null;
+
+let blockStartTs = null;
+let focusStartedRemaining = null;
+
+/* =========================
+   Selection helpers
+========================= */
+function findProject(projectId){
+  return projects.find(p => p.id === projectId) || null;
+}
+function findTask(projectId, taskId){
+  const p = findProject(projectId);
+  if(!p) return null;
+  return p.tasks.find(t => t.id === taskId) || null;
+}
 function selectedTaskObj(){
-  if(!selected?.project || !selected?.taskId) return null;
-  const list = tasksByProject[selected.project] || [];
-  return list.find(t => t.id === selected.taskId) || null;
+  if(!selected?.projectId || !selected?.taskId) return null;
+  return findTask(selected.projectId, selected.taskId);
 }
 function updateSelectedLabels(){
+  const p = findProject(selected.projectId);
   const t = selectedTaskObj();
-  if(!t){
+  if(!p || !t){
     currentTaskLabel.textContent = "—";
     currentProjectLabel.textContent = "—";
   }else{
     currentTaskLabel.textContent = t.name;
-    currentProjectLabel.textContent = selected.project;
+    currentProjectLabel.textContent = p.name;
   }
   enforceStartLock();
 }
@@ -801,26 +889,28 @@ function enforceStartLock(){
     btnStart.disabled = true;
     warningEl.textContent = "Choose a task before starting focus";
   }else{
-    // enable only if not running (either clock or pomo)
-    if(!isAnyTimerRunning()) btnStart.disabled = false;
+    if(!timer) btnStart.disabled = false;
     warningEl.textContent = "";
   }
 }
 
 /* =========================
-   Log + summaries
+   Weekly summaries
 ========================= */
 function sessionsThisWeek(){
   const wk = weekKey(new Date());
   return sessions.filter(s => s.weekKey === wk);
 }
 function groupWeekly(slist){
+  // group by projectName -> tasks
   const out = {};
   for(const s of slist){
-    if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
-    out[s.project].total += s.minutes;
-    if(!out[s.project].tasks[s.taskName]) out[s.project].tasks[s.taskName] = 0;
-    out[s.project].tasks[s.taskName] += s.minutes;
+    const proj = s.projectName || "Unknown project";
+    const task = s.taskName || "Unknown task";
+    if(!out[proj]) out[proj] = { total:0, tasks:{} };
+    out[proj].total += s.minutes;
+    if(!out[proj].tasks[task]) out[proj].tasks[task] = 0;
+    out[proj].tasks[task] += s.minutes;
   }
   return out;
 }
@@ -855,9 +945,9 @@ function renderPastWeeks(){
       </div>
       <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">`;
 
-    for(const project of PROJECTS){
-      if(!grouped[project]) continue;
-      html += `<div style="font-weight:850;">${project} — ${grouped[project].total} min</div>`;
+    const projEntries = Object.entries(grouped).sort((a,b)=>b[1].total-a[1].total);
+    for(const [projName, data] of projEntries){
+      html += `<div style="font-weight:850;">${projName} — ${data.total} min</div>`;
     }
 
     html += `</div></div>`;
@@ -878,11 +968,11 @@ function renderWeeklyLog(){
     weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
   }else{
     let html = "";
-    for(const project of PROJECTS){
-      if(!grouped[project]) continue;
-      const p = grouped[project];
+    // order: by total desc
+    const projEntries = Object.entries(grouped).sort((a,b)=>b[1].total-a[1].total);
+    for(const [projName, p] of projEntries){
       html += `<div style="margin-bottom:10px;">
-        <div style="font-weight:900;">${project} — ${p.total} min</div>
+        <div style="font-weight:900;">${projName} — ${p.total} min</div>
         <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
       const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
       for(const [taskName, mins] of taskEntries){
@@ -912,10 +1002,9 @@ function weeklySummaryText(){
     return lines.join("\n");
   }
 
-  for(const project of PROJECTS){
-    if(!grouped[project]) continue;
-    const p = grouped[project];
-    lines.push(`${project} — ${p.total} min`);
+  const projEntries = Object.entries(grouped).sort((a,b)=>b[1].total-a[1].total);
+  for(const [projName, p] of projEntries){
+    lines.push(`${projName} — ${p.total} min`);
     const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
     for(const [taskName, mins] of taskEntries){
       lines.push(`  • ${taskName} — ${mins} min`);
@@ -925,199 +1014,22 @@ function weeklySummaryText(){
   return lines.join("\n").trim();
 }
 
-function logFocusSession(minutes){
-  const t = selectedTaskObj();
-  if(!t) return;
-
-  const entry = {
-    ts: new Date().toISOString(),
-    weekKey: weekKey(new Date()),
-    project: selected.project,
-    taskId: t.id,
-    taskName: t.name,
-    minutes
-  };
-  sessions.push(entry);
-  saveJSON(STORAGE_SESSIONS, sessions);
-  renderWeeklyLog();
-}
-
 /* =========================
-   Shared ring render helpers
+   Mode logic + render
 ========================= */
 function fmt(sec){
   const m = Math.floor(sec/60).toString().padStart(2,"0");
   const s = Math.floor(sec%60).toString().padStart(2,"0");
   return `${m}:${s}`;
 }
-function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-
-/* =========================
-   TRACKER MODE: Clock vs Pomodoro
-========================= */
-let trackerMode = "clock"; // default as you requested
-function setTrackerMode(m){
-  if(m !== "clock" && m !== "pomo") return;
-
-  // stop any running timer when switching (safe)
-  stopAllTimers(true);
-
-  trackerMode = m;
-
-  if(trackerMode === "clock"){
-    btnClock.classList.add("active");
-    btnPomo.classList.remove("active");
-
-    modeLabel.textContent = "Clock";
-    planLabel.textContent = "• clock in/out";
-    subEl.textContent = "Clock mode • ready";
-
-    pomoSettingsRow.style.display = "none";
-    btnSkip.style.display = "none";
-
-    btnStart.textContent = "Clock In";
-    btnStop.textContent = "Clock Out";
-
-    // reset ring display for clock
-    clockSetIdle();
-  }else{
-    btnPomo.classList.add("active");
-    btnClock.classList.remove("active");
-
-    pomoSettingsRow.style.display = "";
-    btnSkip.style.display = "";
-
-    // set pomo UI to current pomo state
-    modeLabel.textContent = (pomoMode === "focus") ? "Focus" : "Break";
-    planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
-
-    // render pomo state
-    renderPomo();
-  }
-
-  enforceStartLock();
-  renderWeeklyLog();
-}
-
-/* =========================
-   CLOCK MODE state
-========================= */
-let clockTimer = null;
-let clockLastTick = null;
-let clockElapsedSec = 0;          // elapsed time while running
-let clockRunning = false;
-let clockSessionStartTs = null;   // for stability when tab is inactive
-
-function isAnyTimerRunning(){
-  return !!clockTimer || !!pomoTimer;
-}
-
-function clockSetIdle(){
-  clockElapsedSec = 0;
-  timeEl.textContent = "00:00";
-  ring.style.setProperty("--progress", 0);
-  btnPause.disabled = true;
-}
-
-function renderClock(){
-  timeEl.textContent = fmt(clockElapsedSec);
-
-  // ring: show loop progress of 60 minutes (visual only)
-  const loop = 60 * 60;
-  const prog = (clockElapsedSec % loop) / loop;
-  ring.style.setProperty("--progress", clamp01(prog));
-}
-
-function startClock(){
-  if(clockTimer) return;
-
-  if(!selectedTaskObj()){
-    enforceStartLock();
-    return;
-  }
-
-  unlockAudioOnUserGesture();
-  playTick(); // sound on Clock In
-  startPetals();
-
-  clockRunning = true;
-  clockSessionStartTs = Date.now();
-  clockLastTick = Date.now();
-
-  clockTimer = setInterval(() => {
-    const now = Date.now();
-    const delta = Math.floor((now - clockLastTick) / 1000);
-    if(delta >= 1){
-      clockElapsedSec += delta;
-      clockLastTick += delta * 1000;
-    }
-    renderClock();
-  }, 250);
-
-  btnPause.disabled = false;
-  btnStart.disabled = true;
-}
-
-function pauseClock(){
-  if(!clockTimer) return;
-  clearInterval(clockTimer);
-  clockTimer = null;
-  clockLastTick = null;
-  clockRunning = false;
-
-  stopPetals();
-  btnPause.disabled = true;
-  btnStart.disabled = false;
-
-  renderClock();
-}
-
-function clockOut(){
-  // stop timer first
-  if(clockTimer){
-    pauseClock();
-  }
-
-  unlockAudioOnUserGesture();
-  playChime(); // sound on Clock Out
-
-  // auto-log in minutes (>=1)
-  const minutes = Math.round(clockElapsedSec / 60);
-  if(minutes >= 1){
-    logFocusSession(minutes);
-  }
-
-  // reset clock UI
-  clockSetIdle();
-  stopPetals();
-
-  // allow start again if task exists
-  enforceStartLock();
-}
-
-/* =========================
-   POMODORO MODE state (your original)
-========================= */
-let pomoMode = "focus"; // "focus" | "break"
-let pomos = 0;
-
-let total = 35 * 60;
-let remaining = total;
-
-let pomoTimer = null;
-let pomoLastTick = null;
-
-let blockStartTs = null;
-let focusStartedRemaining = null;
-
 function nextBreakMins(nextPomo){
   return (nextPomo % longEvery() === 0) ? longBreakMinutes() : shortBreakMinutes();
 }
 
-function setPomoMode(newMode){
-  pomoMode = newMode;
+function setMode(newMode){
+  mode = newMode;
 
-  if(pomoMode === "focus"){
+  if(mode === "focus"){
     total = focusMinutes() * 60;
     remaining = total;
     modeLabel.textContent = "Focus";
@@ -1132,17 +1044,15 @@ function setPomoMode(newMode){
   }
 
   planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
-  renderPomo();
+  render();
 }
 
-function renderPomo(){
+function render(){
   timeEl.textContent = fmt(remaining);
   const progress = 1 - (remaining / total);
-  ring.style.setProperty("--progress", clamp01(progress));
+  ring.style.setProperty("--progress", Math.max(0, Math.min(1, progress)));
 
-  const running = !!pomoTimer;
-
-  // lock settings while running (only in pomo mode)
+  const running = !!timer;
   focusInput.disabled = running;
   shortBreakInput.disabled = running;
   longBreakInput.disabled = running;
@@ -1150,13 +1060,37 @@ function renderPomo(){
   goalMinInput.disabled = running;
 
   btnPause.disabled = !running;
-  btnStart.disabled = running || !selectedTaskObj();
+  btnStop.disabled = false;
+  btnSkip.disabled = false;
+  btnReset.disabled = false;
 
   enforceStartLock();
 }
 
+/* =========================
+   Session logging
+========================= */
+function logFocusSession(minutes){
+  const p = findProject(selected.projectId);
+  const t = selectedTaskObj();
+  if(!p || !t) return;
+
+  const entry = {
+    ts: new Date().toISOString(),
+    weekKey: weekKey(new Date()),
+    projectId: p.id,
+    projectName: p.name,
+    taskId: t.id,
+    taskName: t.name,
+    minutes
+  };
+  sessions.push(entry);
+  saveJSON(STORAGE_SESSIONS, sessions);
+  renderWeeklyLog();
+}
+
 function logPartialFocusIfNeeded(){
-  if(pomoMode !== "focus") return;
+  if(mode !== "focus") return;
   if(blockStartTs === null || focusStartedRemaining === null) return;
 
   const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
@@ -1164,12 +1098,16 @@ function logPartialFocusIfNeeded(){
   if(minutes >= 1){
     logFocusSession(minutes);
   }
+
   blockStartTs = null;
   focusStartedRemaining = null;
 }
 
-function startPomodoro(){
-  if(pomoTimer) return;
+/* =========================
+   Timer controls
+========================= */
+function startTimer(){
+  if(timer) return;
 
   if(!selectedTaskObj()){
     enforceStartLock();
@@ -1185,156 +1123,103 @@ function startPomodoro(){
     focusStartedRemaining = remaining;
   }
 
-  pomoLastTick = Date.now();
-  pomoTimer = setInterval(() => {
+  lastTick = Date.now();
+  timer = setInterval(() => {
     const now = Date.now();
-    const delta = Math.floor((now - pomoLastTick) / 1000);
+    const delta = Math.floor((now - lastTick) / 1000);
 
     if(delta >= 1){
       remaining -= delta;
-      pomoLastTick += delta * 1000;
+      lastTick += delta * 1000;
     }
 
     if(remaining <= 0){
       remaining = 0;
-      renderPomo();
+      render();
       playChime();
 
-      clearInterval(pomoTimer);
-      pomoTimer = null;
-      pomoLastTick = null;
+      clearInterval(timer);
+      timer = null;
+      lastTick = null;
 
-      if(pomoMode === "focus"){
-        // log full focus block minutes (config value)
+      if(mode === "focus"){
         logFocusSession(focusMinutes());
 
         blockStartTs = null;
         focusStartedRemaining = null;
 
         pomos += 1;
-        setPomoMode("break");
+        setMode("break");
       }else{
-        setPomoMode("focus");
+        setMode("focus");
       }
 
       stopPetals();
-      renderPomo();
+      render();
       return;
     }
 
-    renderPomo();
+    render();
   }, 250);
 
-  renderPomo();
+  render();
 }
 
-function pausePomodoro(){
-  if(!pomoTimer) return;
-  clearInterval(pomoTimer);
-  pomoTimer = null;
-  pomoLastTick = null;
+function pauseTimer(){
+  clearInterval(timer);
+  timer = null;
+  lastTick = null;
 
   logPartialFocusIfNeeded();
+
   stopPetals();
-  renderPomo();
+  render();
 }
 
-function stopPomodoroToBlockStart(){
-  pausePomodoro();
+function stopToBlockStart(){
+  pauseTimer();
   remaining = total;
-  renderPomo();
-}
-
-function skipPomodoroBlock(){
-  unlockAudioOnUserGesture();
-  pausePomodoro();
-
-  if(pomoMode === "focus"){
-    if(!selectedTaskObj()){
-      enforceStartLock();
-      return;
-    }
-    // partial already logged by pausePomodoro()
-    pomos += 1;
-    setPomoMode("break");
-  }else{
-    setPomoMode("focus");
-  }
+  render();
 }
 
 /* =========================
-   Stop all timers helper
+   Buttons
 ========================= */
-function stopAllTimers(silent=false){
-  // clock
-  if(clockTimer){
-    clearInterval(clockTimer);
-    clockTimer = null;
-  }
-  clockRunning = false;
-  clockLastTick = null;
-
-  // pomo
-  if(pomoTimer){
-    clearInterval(pomoTimer);
-    pomoTimer = null;
-  }
-  pomoLastTick = null;
-
-  stopPetals();
-
-  if(trackerMode === "clock"){
-    if(!silent) playChime();
-    btnPause.disabled = true;
-    btnStart.disabled = !selectedTaskObj();
-  }else{
-    btnPause.disabled = true;
-    btnStart.disabled = !selectedTaskObj();
-  }
-}
-
-/* =========================
-   Buttons (mode-aware)
-========================= */
-btnStart.onclick = () => {
-  unlockAudioOnUserGesture();
-  if(trackerMode === "clock") startClock();
-  else startPomodoro();
-};
+btnStart.onclick = startTimer;
 
 btnPause.onclick = () => {
   unlockAudioOnUserGesture();
-  if(trackerMode === "clock") pauseClock();
-  else pausePomodoro();
+  pauseTimer();
 };
 
 btnStop.onclick = () => {
   unlockAudioOnUserGesture();
-  if(trackerMode === "clock") clockOut();
-  else {
-    logPartialFocusIfNeeded();
-    stopPomodoroToBlockStart();
-  }
+  logPartialFocusIfNeeded();
+  stopToBlockStart();
 };
 
 btnSkip.onclick = () => {
-  if(trackerMode !== "pomo") return;
-  skipPomodoroBlock();
+  unlockAudioOnUserGesture();
+  pauseTimer();
+
+  if(mode === "focus"){
+    if(!selectedTaskObj()){
+      enforceStartLock();
+      return;
+    }
+    // partial already logged by pauseTimer()
+    pomos += 1;
+    setMode("break");
+  }else{
+    setMode("focus");
+  }
 };
 
 btnReset.onclick = () => {
   unlockAudioOnUserGesture();
-  if(trackerMode === "clock"){
-    // reset clock without logging
-    if(clockTimer) pauseClock();
-    clockSetIdle();
-    subEl.textContent = "Clock mode • ready";
-    stopPetals();
-  }else{
-    pausePomodoro();
-    pomos = 0;
-    setPomoMode("focus");
-  }
+  pauseTimer();
+  pomos = 0;
+  setMode("focus");
 };
 
 copyBtn.onclick = async () => {
@@ -1354,7 +1239,7 @@ pastToggleEl.onclick = () => {
 };
 
 /* =========================
-   Inputs: normalize + refresh (Pomo only)
+   Inputs: normalize + refresh
 ========================= */
 [goalMinInput, focusInput, shortBreakInput, longBreakInput, longEveryInput].forEach(el => {
   el.addEventListener("change", () => {
@@ -1364,12 +1249,10 @@ pastToggleEl.onclick = () => {
     longBreakInput.value = longBreakMinutes();
     longEveryInput.value = longEvery();
 
-    planLabel.textContent = (trackerMode === "pomo")
-      ? `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`
-      : "• clock in/out";
+    planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
 
-    if(trackerMode === "pomo" && !pomoTimer){
-      if(pomoMode === "focus"){
+    if(!timer){
+      if(mode === "focus"){
         total = focusMinutes() * 60;
         remaining = total;
         subEl.textContent = `(next break: ${nextBreakMins(pomos + 1)}m)`;
@@ -1380,35 +1263,116 @@ pastToggleEl.onclick = () => {
         remaining = total;
         subEl.textContent = `(next focus: ${focusMinutes()}m)`;
       }
-      renderPomo();
     }
 
     renderWeeklyLog();
+    render();
   });
 });
 
 /* =========================
-   Sidebar rendering
+   Sidebar: Projects & Tasks (dynamic + delete)
 ========================= */
 const projectsRoot = document.getElementById("projectsRoot");
 
-function renderSidebar(){
-  let html = "";
-  for(const project of PROJECTS){
-    const tasks = tasksByProject[project] || [];
-    const addId = `add-${safeId(project)}`;
+function saveProjects(){
+  saveJSON(STORAGE_PROJECTS, projects);
+}
 
-    html += `<div class="project" data-project="${project}">
+function clearSelectionIfMissing(){
+  const p = findProject(selected.projectId);
+  const t = selectedTaskObj();
+  if(!p || !t){
+    selected.projectId = null;
+    selected.taskId = null;
+    persistUI();
+  }
+}
+
+function addProject(name){
+  const n = (name || "").trim();
+  if(!n) return;
+
+  projects.push({ id: uid("proj"), name: n, tasks: [] });
+  saveProjects();
+  renderSidebar();
+}
+
+function deleteProject(projectId){
+  const p = findProject(projectId);
+  if(!p) return;
+
+  const ok = confirm(`Delete project "${p.name}" and all its tasks?`);
+  if(!ok) return;
+
+  // stop timer if currently running on a task within this project
+  if(selected.projectId === projectId){
+    pauseTimer();
+    selected.projectId = null;
+    selected.taskId = null;
+    persistUI();
+  }
+
+  projects = projects.filter(x => x.id !== projectId);
+  saveProjects();
+  renderSidebar();
+  updateSelectedLabels();
+}
+
+function addTask(projectId, taskName){
+  const p = findProject(projectId);
+  if(!p) return;
+
+  const n = (taskName || "").trim();
+  if(!n) return;
+
+  p.tasks.push({ id: uid("task"), name: n });
+  saveProjects();
+  renderSidebar();
+}
+
+function deleteTask(projectId, taskId){
+  const p = findProject(projectId);
+  if(!p) return;
+  const t = p.tasks.find(x => x.id === taskId);
+  if(!t) return;
+
+  const ok = confirm(`Delete task "${t.name}"?`);
+  if(!ok) return;
+
+  if(selected.projectId === projectId && selected.taskId === taskId){
+    pauseTimer();
+    selected.projectId = null;
+    selected.taskId = null;
+    persistUI();
+  }
+
+  p.tasks = p.tasks.filter(x => x.id !== taskId);
+  saveProjects();
+  renderSidebar();
+  updateSelectedLabels();
+}
+
+function renderSidebar(){
+  clearSelectionIfMissing();
+
+  let html = "";
+  for(const project of projects){
+    const tasks = project.tasks || [];
+    const addId = `add-${safeDomId(project.id)}`;
+
+    html += `<div class="project" data-projectid="${project.id}">
       <div class="project-head">
-        <div class="project-name">${project}</div>
+        <div class="project-name">${escapeHtml(project.name)}</div>
         <div class="project-actions">
-          <button class="plusbtn" data-action="toggleAdd" data-project="${project}" title="Add task">+</button>
+          <button class="plusbtn" data-action="toggleAddTask" data-projectid="${project.id}" title="Add task">+</button>
+          <button class="dangerbtn" data-action="deleteProject" data-projectid="${project.id}" title="Delete project">🗑</button>
         </div>
       </div>
 
       <div class="addrow" id="${addId}">
-        <input type="text" placeholder="New task…" data-project="${project}" />
-        <button data-action="addTask" data-project="${project}">Add</button>
+        <input type="text" placeholder="New task…" data-projectid="${project.id}" />
+        <button data-action="addTask" data-projectid="${project.id}">Add</button>
       </div>
 
       <div class="tasklist">`;
@@ -1417,10 +1381,13 @@ function renderSidebar(){
       html += `<div class="mini" style="padding:8px 4px;">No tasks yet.</div>`;
     }else{
       for(const t of tasks){
-        const active = (selected.project === project && selected.taskId === t.id) ? "active" : "";
-        html += `<div class="task ${active}" data-action="selectTask" data-project="${project}" data-taskid="${t.id}">
-          <span>${t.name}</span>
-          <small>→</small>
+        const active = (selected.projectId === project.id && selected.taskId === t.id) ? "active" : "";
+        html += `<div class="task ${active}" data-action="selectTask" data-projectid="${project.id}" data-taskid="${t.id}">
+          <span>${escapeHtml(t.name)}</span>
+          <div class="taskActions">
+            <button class="tdel" data-action="deleteTask" data-projectid="${project.id}" data-taskid="${t.id}" title="Delete task">×</button>
+            <small>→</small>
+          </div>
         </div>`;
       }
     }
@@ -1431,15 +1398,26 @@ function renderSidebar(){
   projectsRoot.innerHTML = html;
 }
 
+/* tiny escape (avoid broken HTML if you type symbols) */
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
 projectsRoot.addEventListener("click", (e) => {
   const el = e.target.closest("[data-action]");
   if(!el) return;
 
   const action = el.getAttribute("data-action");
-  const project = el.getAttribute("data-project");
+  const projectId = el.getAttribute("data-projectid");
+  const taskId = el.getAttribute("data-taskid");
 
-  if(action === "toggleAdd"){
-    const row = document.getElementById(`add-${safeId(project)}`);
+  if(action === "toggleAddTask"){
+    const row = document.getElementById(`add-${safeDomId(projectId)}`);
     if(!row) return;
     row.classList.toggle("show");
     const inp = row.querySelector("input");
@@ -1448,31 +1426,69 @@ projectsRoot.addEventListener("click", (e) => {
   }
 
   if(action === "addTask"){
-    const row = document.getElementById(`add-${safeId(project)}`);
-    if(!row) return;
-    const inp = row.querySelector("input");
+    const row = document.getElementById(`add-${safeDomId(projectId)}`);
+    const inp = row?.querySelector("input");
     const name = (inp?.value || "").trim();
     if(!name) return;
 
-    tasksByProject[project].push({ id: uid(), name });
-    saveJSON(STORAGE_TASKS, tasksByProject);
+    addTask(projectId, name);
 
-    inp.value = "";
-    row.classList.remove("show");
-
-    renderSidebar();
+    if(inp){
+      inp.value = "";
+      row.classList.remove("show");
+    }
     return;
   }
 
   if(action === "selectTask"){
-    const taskId = el.getAttribute("data-taskid");
-    selected.project = project;
+    selected.projectId = projectId;
     selected.taskId = taskId;
     persistUI();
 
     renderSidebar();
     updateSelectedLabels();
     return;
+  }
+
+  if(action === "deleteProject"){
+    deleteProject(projectId);
+    return;
+  }
+
+  if(action === "deleteTask"){
+    deleteTask(projectId, taskId);
+    return;
+  }
+});
+
+/* =========================
+   Add Project UI (top)
+========================= */
+function openProjectAdd(){
+  projectAddRow.classList.add("show");
+  setTimeout(()=>projectNameInput?.focus?.(), 0);
+}
+function closeProjectAdd(){
+  projectAddRow.classList.remove("show");
+  projectNameInput.value = "";
+}
+addProjectBtn.onclick = () => {
+  if(projectAddRow.classList.contains("show")) closeProjectAdd();
+  else openProjectAdd();
+};
+projectAddConfirm.onclick = () => {
+  const name = projectNameInput.value.trim();
+  if(!name) return;
+  addProject(name);
+  closeProjectAdd();
+};
+projectNameInput.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    projectAddConfirm.click();
+  }
+  if(e.key === "Escape"){
+    closeProjectAdd();
   }
 });
 
@@ -1492,27 +1508,14 @@ const collapseBtn = document.getElementById("collapseBtn");
 })();
 
 /* =========================
-   Toggle handlers
-========================= */
-btnClock.onclick = () => setTrackerMode("clock");
-btnPomo.onclick  = () => setTrackerMode("pomo");
-
-/* =========================
    Init
 ========================= */
 renderSidebar();
 updateSelectedLabels();
-renderWeeklyLog();
 
-// Initialize pomo internals safely
-total = focusMinutes() * 60;
-remaining = total;
-setPomoMode("focus");
-
-// Default mode = clock (as requested)
-setTrackerMode("clock");
-clockSetIdle();
+setMode("focus");
 renderWeeklyLog();
+render();
 </script>
 
 </body>
