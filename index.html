@@ -216,11 +216,7 @@ body{
 .project-name{
   font-weight:900;
   font-size:13px;
-  display:flex;
-  align-items:center;
-  gap:8px;
 }
-
 .project-actions{
   display:flex;
   align-items:center;
@@ -237,19 +233,6 @@ body{
   display:grid;
   place-items:center;
 }
-
-.trashbtn{
-  width:30px; height:30px;
-  border-radius:10px;
-  border:1px solid rgba(168,85,247,.14);
-  background: rgba(255,255,255,.78);
-  cursor:pointer;
-  font-weight:900;
-  display:grid;
-  place-items:center;
-  opacity:.9;
-}
-.trashbtn:hover{ opacity:1; }
 
 .tasklist{
   margin-top:8px;
@@ -282,25 +265,6 @@ body{
   background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(192,132,252,.12));
 }
 
-.task-right{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.xbtn{
-  width:26px; height:26px;
-  border-radius:10px;
-  border:1px solid rgba(168,85,247,.14);
-  background: rgba(255,255,255,.80);
-  cursor:pointer;
-  display:grid;
-  place-items:center;
-  font-weight:900;
-  opacity:.85;
-}
-.xbtn:hover{ opacity:1; }
-
 .addrow{
   display:none;
   margin-top:8px;
@@ -319,33 +283,6 @@ body{
 }
 
 .addrow button{
-  border:none;
-  border-radius:12px;
-  padding:10px 12px;
-  cursor:pointer;
-  font-weight:800;
-  background: linear-gradient(135deg,var(--accent),var(--accent2));
-  color:white;
-  box-shadow:0 12px 26px rgba(168,85,247,.18);
-}
-
-/* ===== Project add row (top) ===== */
-.prow{
-  display:none;
-  gap:8px;
-  margin:10px 0 12px;
-}
-.prow.show{ display:flex; }
-.prow input{
-  flex:1;
-  border:1px solid rgba(168,85,247,.18);
-  background: rgba(255,255,255,.90);
-  border-radius:12px;
-  padding:10px 10px;
-  outline:none;
-  font-weight:650;
-}
-.prow button{
   border:none;
   border-radius:12px;
   padding:10px 12px;
@@ -507,18 +444,10 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
     <aside class="sidebar">
       <div class="sb-top">
         <button class="iconbtn" id="collapseBtn" title="Collapse/Expand">≡</button>
-
-        <div class="sidebar-inner" style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div class="sidebar-inner" style="flex:1;">
           <div class="sb-title">Projects & Tasks</div>
-          <button class="plusbtn" id="toggleProjectAdd" title="Add project">+</button>
         </div>
-
         <div style="width:38px;"></div>
-      </div>
-
-      <div class="sidebar-inner prow" id="projectAddRow">
-        <input id="projectNameInput" type="text" placeholder="New project…" />
-        <button id="projectAddBtn">Add</button>
       </div>
 
       <div class="sidebar-inner" id="projectsRoot"></div>
@@ -601,7 +530,14 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
             <button class="copybtn" id="copyBtn">Copy weekly summary</button>
           </div>
 
+          <div id="weeklyMeta" class="mini" style="margin-top:-2px; margin-bottom:10px;"></div>
+
           <div id="weeklyLog"></div>
+
+          <div class="toggle" id="pastDaysToggleWrap" style="display:none;">
+            <div class="toggler" id="pastDaysToggle">▸ Past days (this week)</div>
+            <div class="past" id="pastDays"></div>
+          </div>
 
           <div class="toggle">
             <div class="toggler" id="pastToggle">▸ View past weeks</div>
@@ -616,12 +552,20 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
 
 <script>
 /* =========================
-   Storage (v2 projects) + legacy migrate
+   Projects (fixed) + Storage
 ========================= */
-const STORAGE_PROJECTS = "focus_projects_v2";     // NEW (projects + tasks)
-const STORAGE_TASKS_LEGACY = "pomo_tasks_v1";     // OLD (tasksByProject)
-const STORAGE_SESSIONS = "pomo_sessions_v1";      // keep same
-const STORAGE_UI = "pomo_ui_v1";                  // keep same selection key
+const PROJECTS = [
+  "Work (Celeste)",
+  "Work (Lenny)",
+  "Estudios",
+  "Practica",
+  "Portafolio",
+  "Proyecto"
+];
+
+const STORAGE_TASKS = "pomo_tasks_v1";
+const STORAGE_SESSIONS = "pomo_sessions_v1";
+const STORAGE_UI = "pomo_ui_v1";
 const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
 
 function uid(){
@@ -641,14 +585,6 @@ function loadJSON(key, fallback){
 }
 function saveJSON(key, value){
   localStorage.setItem(key, JSON.stringify(value));
-}
-function esc(str){
-  return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
 }
 
 /* =========================
@@ -677,52 +613,41 @@ function prettyWeekLabel(key){
 }
 
 /* =========================
-   Projects data model (v2)
-   projects = [{id, name, tasks:[{id,name}]}]
+   Day helpers (local time)
 ========================= */
-function defaultProjects(){
-  return [
-    { id: uid(), name: "Work (Celeste)", tasks: [] },
-    { id: uid(), name: "Work (Lenny)", tasks: [] },
-    { id: uid(), name: "Estudios", tasks: [] },
-    { id: uid(), name: "Practica", tasks: [] },
-    { id: uid(), name: "Portafolio", tasks: [] },
-    { id: uid(), name: "Proyecto", tasks: [] },
-  ];
+function dayKeyLocal(dateObj){
+  const d = new Date(dateObj);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${da}`;
+}
+function dayNameFromKey(dayKey){
+  const [y,m,d] = dayKey.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString("en-US", { weekday:"long" });
+}
+function dayNameShortFromKey(dayKey){
+  const [y,m,d] = dayKey.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString("en-US", { weekday:"short" });
 }
 
-function migrateLegacyIfNeeded(){
-  const existing = loadJSON(STORAGE_PROJECTS, null);
-  if(existing && Array.isArray(existing)) return existing;
-
-  const legacy = loadJSON(STORAGE_TASKS_LEGACY, null); // { "Project": [{id,name}] }
-  if(legacy && typeof legacy === "object"){
-    const out = [];
-    for(const [pname, tasks] of Object.entries(legacy)){
-      out.push({
-        id: uid(),
-        name: pname,
-        tasks: Array.isArray(tasks) ? tasks.map(t => ({ id: t.id || uid(), name: t.name || "Untitled task" })) : []
-      });
-    }
-    if(out.length){
-      saveJSON(STORAGE_PROJECTS, out);
-      return out;
-    }
-  }
-
-  const def = defaultProjects();
-  saveJSON(STORAGE_PROJECTS, def);
-  return def;
+/* =========================
+   Data: tasks + sessions
+========================= */
+let tasksByProject = loadJSON(STORAGE_TASKS, null);
+if(!tasksByProject){
+  tasksByProject = {};
+  PROJECTS.forEach(p => tasksByProject[p] = []);
+  saveJSON(STORAGE_TASKS, tasksByProject);
+}else{
+  PROJECTS.forEach(p => { if(!tasksByProject[p]) tasksByProject[p] = []; });
 }
 
-let projects = migrateLegacyIfNeeded();
-
-/* sessions */
 let sessions = loadJSON(STORAGE_SESSIONS, []);
 // { ts, weekKey, project, taskId, taskName, minutes }
 
-/* selected (keep your old shape: {project, taskId}) */
 let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
 function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
@@ -742,7 +667,13 @@ const currentTaskLabel = document.getElementById("currentTaskLabel");
 const currentProjectLabel = document.getElementById("currentProjectLabel");
 const warningEl = document.getElementById("warning");
 
+const weeklyMetaEl = document.getElementById("weeklyMeta");
 const weeklyLogEl = document.getElementById("weeklyLog");
+
+const pastDaysWrap = document.getElementById("pastDaysToggleWrap");
+const pastDaysToggleEl = document.getElementById("pastDaysToggle");
+const pastDaysEl = document.getElementById("pastDays");
+
 const pastWeeksEl = document.getElementById("pastWeeks");
 const pastToggleEl = document.getElementById("pastToggle");
 
@@ -764,12 +695,6 @@ const btnReset = document.getElementById("reset");
 const btnClock = document.getElementById("btnClock");
 const btnPomo  = document.getElementById("btnPomo");
 const pomoSettingsRow = document.getElementById("pomoSettingsRow");
-
-/* project add UI */
-const toggleProjectAdd = document.getElementById("toggleProjectAdd");
-const projectAddRow = document.getElementById("projectAddRow");
-const projectNameInput = document.getElementById("projectNameInput");
-const projectAddBtn = document.getElementById("projectAddBtn");
 
 /* =========================
    Clamp helpers
@@ -802,15 +727,16 @@ function unlockAudioOnUserGesture(){
   audioCtx?.resume?.().catch(()=>{});
 }
 
+// louder tick
 function playTick(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, t0);
+  osc.frequency.setValueAtTime(523.25, t0); // C5
   gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.01); // louder
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
@@ -818,16 +744,17 @@ function playTick(){
   osc.stop(t0 + 0.2);
 }
 
+// louder chime
 function playChime(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const master = audioCtx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02);
+  master.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02); // louder
   master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.35);
   master.connect(audioCtx.destination);
 
-  const freqs = [659.25, 880.00, 987.77];
+  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -835,7 +762,7 @@ function playChime(){
     osc.frequency.setValueAtTime(f, t0);
     const start = t0 + i * 0.06;
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.85, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.85, start + 0.01); // louder
     gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.95);
     osc.connect(gain);
     gain.connect(master);
@@ -884,30 +811,13 @@ function stopPetals(){
 }
 
 /* =========================
-   Project/task helpers (v2)
+   Task selection helpers
 ========================= */
-function saveProjects(){ saveJSON(STORAGE_PROJECTS, projects); }
-
-function projectNames(){
-  return projects.map(p => p.name);
-}
-
-function ensureSelectedStillExists(){
-  if(!selected?.project || !selected?.taskId) return;
-  const p = projects.find(x => x.name === selected.project);
-  if(!p){ selected.project=null; selected.taskId=null; persistUI(); return; }
-  const t = (p.tasks||[]).find(x => x.id === selected.taskId);
-  if(!t){ selected.taskId=null; persistUI(); }
-}
-
 function selectedTaskObj(){
-  ensureSelectedStillExists();
   if(!selected?.project || !selected?.taskId) return null;
-  const p = projects.find(x => x.name === selected.project);
-  if(!p) return null;
-  return (p.tasks||[]).find(t => t.id === selected.taskId) || null;
+  const list = tasksByProject[selected.project] || [];
+  return list.find(t => t.id === selected.taskId) || null;
 }
-
 function updateSelectedLabels(){
   const t = selectedTaskObj();
   if(!t){
@@ -919,16 +829,16 @@ function updateSelectedLabels(){
   }
   enforceStartLock();
 }
-
-/* =========================
-   Ring helpers
-========================= */
-function fmt(sec){
-  const m = Math.floor(sec/60).toString().padStart(2,"0");
-  const s = Math.floor(sec%60).toString().padStart(2,"0");
-  return `${m}:${s}`;
+function enforceStartLock(){
+  const hasTask = !!selectedTaskObj();
+  if(!hasTask){
+    btnStart.disabled = true;
+    warningEl.textContent = "Choose a task before starting focus";
+  }else{
+    if(!isAnyTimerRunning()) btnStart.disabled = false;
+    warningEl.textContent = "";
+  }
 }
-function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 
 /* =========================
    Log + summaries
@@ -937,7 +847,9 @@ function sessionsThisWeek(){
   const wk = weekKey(new Date());
   return sessions.filter(s => s.weekKey === wk);
 }
+
 function groupWeekly(slist){
+  // { project: { total, tasks: {taskName: minutes} } }
   const out = {};
   for(const s of slist){
     if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
@@ -947,12 +859,34 @@ function groupWeekly(slist){
   }
   return out;
 }
+
+function groupDays(slist){
+  // { dayKey: minutes }
+  const out = {};
+  for(const s of slist){
+    const d = dayKeyLocal(new Date(s.ts));
+    out[d] = (out[d] || 0) + (s.minutes || 0);
+  }
+  return out;
+}
+
 function computeFocusedThisWeekMinutes(){
   const slist = sessionsThisWeek();
+  return slist.reduce((a,b)=>a + (b.minutes||0), 0);
+}
+
+function computeTodayMinutes(){
+  const todayKey = dayKeyLocal(new Date());
+  const slist = sessionsThisWeek();
   let sum = 0;
-  for(const s of slist) sum += s.minutes;
+  for(const s of slist){
+    if(dayKeyLocal(new Date(s.ts)) === todayKey){
+      sum += (s.minutes || 0);
+    }
+  }
   return sum;
 }
+
 function renderPastWeeks(){
   const current = weekKey(new Date());
   const keys = Array.from(new Set(sessions.map(s => s.weekKey)))
@@ -968,58 +902,73 @@ function renderPastWeeks(){
   for(const k of keys){
     const slist = sessions.filter(s => s.weekKey === k);
     const grouped = groupWeekly(slist);
+    const dayTotals = groupDays(slist);
+
     let weekTotal = 0;
     Object.values(grouped).forEach(p => weekTotal += p.total);
+
+    // Build Monday->Sunday order for that week
+    const [yy,mm,dd] = k.split("-").map(Number);
+    const monday = new Date(yy, mm-1, dd);
+    const orderedKeys = [];
+    for(let i=0;i<7;i++){
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      orderedKeys.push(dayKeyLocal(d));
+    }
 
     html += `<div style="margin-top:12px; padding:10px; border-radius:14px; border:1px solid rgba(168,85,247,.14); background: rgba(255,255,255,.70);">
       <div style="font-weight:900; display:flex; justify-content:space-between; gap:10px;">
         <span>${prettyWeekLabel(k)}</span>
         <span>${weekTotal} min</span>
       </div>
-      <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">`;
 
-    // use current project names order, but still show older ones if exist
-    const order = projectNames();
-    const keysP = Object.keys(grouped);
-    const inOrder = order.filter(n => keysP.includes(n));
-    const extras = keysP.filter(n => !order.includes(n)).sort();
+      <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">`;
 
-    for(const name of [...inOrder, ...extras]){
-      html += `<div style="font-weight:850;">${esc(name)} — ${grouped[name].total} min</div>`;
+    for(const dk of orderedKeys){
+      const mins = dayTotals[dk] || 0;
+      html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
+        <span>${dayNameFromKey(dk)}</span>
+        <b>${mins} min</b>
+      </div>`;
     }
 
     html += `</div></div>`;
   }
+
   pastWeeksEl.innerHTML = html;
 }
+
 function renderWeeklyLog(){
   const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
   const grouped = groupWeekly(slist);
 
   document.getElementById("logTitle").textContent = `🗓 Focus log — ${prettyWeekLabel(wk)}`;
+
   const focusedMin = computeFocusedThisWeekMinutes();
+  const todayMin = computeTodayMinutes();
+
   focusedLabel.textContent = String(focusedMin);
   goalLabel.textContent = String(goalMinutes());
 
+  weeklyMetaEl.textContent = `This week focus: ${focusedMin} min   |   Today: ${todayMin} min`;
+
+  // Render weekly grouped view (by project/tasks)
   if(Object.keys(grouped).length === 0){
     weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
   }else{
     let html = "";
-    const order = projectNames();
-    const keysP = Object.keys(grouped);
-    const inOrder = order.filter(n => keysP.includes(n));
-    const extras = keysP.filter(n => !order.includes(n)).sort();
-
-    for(const projectName of [...inOrder, ...extras]){
-      const p = grouped[projectName];
+    for(const project of PROJECTS){
+      if(!grouped[project]) continue;
+      const p = grouped[project];
       html += `<div style="margin-bottom:10px;">
-        <div style="font-weight:900;">${esc(projectName)} — ${p.total} min</div>
+        <div style="font-weight:900;">${project} — ${p.total} min</div>
         <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
       const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
       for(const [taskName, mins] of taskEntries){
         html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75);">
-          <span>${esc(taskName)}</span>
+          <span>${taskName}</span>
           <b>${mins} min</b>
         </div>`;
       }
@@ -1028,15 +977,57 @@ function renderWeeklyLog(){
     weeklyLogEl.innerHTML = html;
   }
 
+  // Past days (this week) toggle: show Monday..yesterday
+  const todayKey = dayKeyLocal(new Date());
+  const dayTotals = groupDays(slist);
+
+  // Build Monday->Sunday for current week
+  const monday = weekStartMonday(new Date());
+  const orderedKeys = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    orderedKeys.push(dayKeyLocal(d));
+  }
+
+  // Filter to past days only (exclude today, exclude future)
+  const pastKeys = orderedKeys.filter(k => {
+    // only keys before todayKey in lexicographic y-m-d order (works)
+    return k < todayKey;
+  });
+
+  if(pastKeys.length === 0){
+    pastDaysWrap.style.display = "none";
+    pastDaysEl.innerHTML = "";
+    pastDaysEl.classList.remove("show");
+    pastDaysToggleEl.textContent = "▸ Past days (this week)";
+  }else{
+    pastDaysWrap.style.display = "";
+    let htmlDays = "";
+    for(const dk of pastKeys){
+      const mins = dayTotals[dk] || 0;
+      htmlDays += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(168,85,247,.12); background: rgba(255,255,255,.75); margin-top:6px;">
+        <span>${dayNameFromKey(dk)}</span>
+        <b>${mins} min</b>
+      </div>`;
+    }
+    pastDaysEl.innerHTML = htmlDays;
+  }
+
   renderPastWeeks();
 }
+
 function weeklySummaryText(){
   const wk = weekKey(new Date());
   const slist = sessionsThisWeek();
   const grouped = groupWeekly(slist);
 
+  const focusedMin = computeFocusedThisWeekMinutes();
+  const todayMin = computeTodayMinutes();
+
   const lines = [];
   lines.push(`🧠 Focus log — ${prettyWeekLabel(wk)}`);
+  lines.push(`This week: ${focusedMin} min | Today: ${todayMin} min`);
   lines.push("");
 
   if(Object.keys(grouped).length === 0){
@@ -1044,20 +1035,37 @@ function weeklySummaryText(){
     return lines.join("\n");
   }
 
-  const order = projectNames();
-  const keysP = Object.keys(grouped);
-  const inOrder = order.filter(n => keysP.includes(n));
-  const extras = keysP.filter(n => !order.includes(n)).sort();
-
-  for(const projectName of [...inOrder, ...extras]){
-    const p = grouped[projectName];
-    lines.push(`${projectName} — ${p.total} min`);
+  for(const project of PROJECTS){
+    if(!grouped[project]) continue;
+    const p = grouped[project];
+    lines.push(`${project} — ${p.total} min`);
     const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
     for(const [taskName, mins] of taskEntries){
       lines.push(`  • ${taskName} — ${mins} min`);
     }
     lines.push("");
   }
+
+  // Add past days breakdown (Mon..yesterday)
+  const todayKey = dayKeyLocal(new Date());
+  const monday = weekStartMonday(new Date());
+  const orderedKeys = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    orderedKeys.push(dayKeyLocal(d));
+  }
+  const dayTotals = groupDays(slist);
+  const pastKeys = orderedKeys.filter(k => k < todayKey);
+
+  if(pastKeys.length){
+    lines.push("Past days (this week):");
+    for(const dk of pastKeys){
+      lines.push(`  • ${dayNameFromKey(dk)} — ${(dayTotals[dk]||0)} min`);
+    }
+    lines.push("");
+  }
+
   return lines.join("\n").trim();
 }
 
@@ -1079,25 +1087,19 @@ function logFocusSession(minutes){
 }
 
 /* =========================
+   Shared ring render helpers
+========================= */
+function fmt(sec){
+  const m = Math.floor(sec/60).toString().padStart(2,"0");
+  const s = Math.floor(sec%60).toString().padStart(2,"0");
+  return `${m}:${s}`;
+}
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+/* =========================
    TRACKER MODE: Clock vs Pomodoro
 ========================= */
-let trackerMode = "clock"; // default
-
-function isAnyTimerRunning(){
-  return !!clockTimer || !!pomoTimer;
-}
-
-function enforceStartLock(){
-  const hasTask = !!selectedTaskObj();
-  if(!hasTask){
-    btnStart.disabled = true;
-    warningEl.textContent = "Choose a task before starting focus";
-  }else{
-    if(!isAnyTimerRunning()) btnStart.disabled = false;
-    warningEl.textContent = "";
-  }
-}
-
+let trackerMode = "clock";
 function setTrackerMode(m){
   if(m !== "clock" && m !== "pomo") return;
 
@@ -1127,6 +1129,7 @@ function setTrackerMode(m){
     pomoSettingsRow.style.display = "";
     btnSkip.style.display = "";
 
+    modeLabel.textContent = (pomoMode === "focus") ? "Focus" : "Break";
     planLabel.textContent = `• ${focusMinutes()}/${shortBreakMinutes()} (long ${longBreakMinutes()} every ${longEvery()})`;
 
     renderPomo();
@@ -1143,16 +1146,23 @@ let clockTimer = null;
 let clockLastTick = null;
 let clockElapsedSec = 0;
 
+function isAnyTimerRunning(){
+  return !!clockTimer || !!pomoTimer;
+}
+
 function clockSetIdle(){
   clockElapsedSec = 0;
   timeEl.textContent = "00:00";
   ring.style.setProperty("--progress", 0);
   btnPause.disabled = true;
+  btnStart.disabled = !selectedTaskObj();
 }
 
 function renderClock(){
   timeEl.textContent = fmt(clockElapsedSec);
-  const loop = 60 * 60; // 60m visual loop
+
+  // ring loop: 60 minutes (visual only)
+  const loop = 60 * 60;
   const prog = (clockElapsedSec % loop) / loop;
   ring.style.setProperty("--progress", clamp01(prog));
 }
@@ -1199,7 +1209,9 @@ function pauseClock(){
 }
 
 function clockOut(){
-  if(clockTimer) pauseClock();
+  if(clockTimer){
+    pauseClock();
+  }
 
   unlockAudioOnUserGesture();
   playChime();
@@ -1324,6 +1336,7 @@ function startPomodoro(){
 
       if(pomoMode === "focus"){
         logFocusSession(focusMinutes());
+
         blockStartTs = null;
         focusStartedRemaining = null;
 
@@ -1395,13 +1408,11 @@ function stopAllTimers(silent=false){
 
   stopPetals();
 
-  if(trackerMode === "clock"){
-    if(!silent) playChime();
-    btnPause.disabled = true;
-    btnStart.disabled = !selectedTaskObj();
-  }else{
-    btnPause.disabled = true;
-    btnStart.disabled = !selectedTaskObj();
+  btnPause.disabled = true;
+  btnStart.disabled = !selectedTaskObj();
+
+  if(!silent){
+    playChime();
   }
 }
 
@@ -1464,6 +1475,11 @@ pastToggleEl.onclick = () => {
   pastToggleEl.textContent = isOpen ? "▾ View past weeks" : "▸ View past weeks";
 };
 
+pastDaysToggleEl.onclick = () => {
+  const isOpen = pastDaysEl.classList.toggle("show");
+  pastDaysToggleEl.textContent = isOpen ? "▾ Past days (this week)" : "▸ Past days (this week)";
+};
+
 /* =========================
    Inputs: normalize + refresh (Pomo only)
 ========================= */
@@ -1499,30 +1515,27 @@ pastToggleEl.onclick = () => {
 });
 
 /* =========================
-   Sidebar rendering (v2)
+   Sidebar rendering
 ========================= */
 const projectsRoot = document.getElementById("projectsRoot");
 
 function renderSidebar(){
-  ensureSelectedStillExists();
-
   let html = "";
-  for(const p of projects){
-    const addId = `add-${safeId(p.id)}`;
-    const tasks = p.tasks || [];
+  for(const project of PROJECTS){
+    const tasks = tasksByProject[project] || [];
+    const addId = `add-${safeId(project)}`;
 
-    html += `<div class="project" data-project="${esc(p.name)}" data-projectid="${p.id}">
+    html += `<div class="project" data-project="${project}">
       <div class="project-head">
-        <div class="project-name">${esc(p.name)}</div>
+        <div class="project-name">${project}</div>
         <div class="project-actions">
-          <button class="plusbtn" data-action="toggleAdd" data-projectid="${p.id}" title="Add task">+</button>
-          <button class="trashbtn" data-action="deleteProject" data-projectid="${p.id}" title="Delete project">🗑</button>
+          <button class="plusbtn" data-action="toggleAdd" data-project="${project}" title="Add task">+</button>
         </div>
       </div>
 
       <div class="addrow" id="${addId}">
-        <input type="text" placeholder="New task…" data-projectid="${p.id}" />
-        <button data-action="addTask" data-projectid="${p.id}">Add</button>
+        <input type="text" placeholder="New task…" data-project="${project}" />
+        <button data-action="addTask" data-project="${project}">Add</button>
       </div>
 
       <div class="tasklist">`;
@@ -1531,13 +1544,10 @@ function renderSidebar(){
       html += `<div class="mini" style="padding:8px 4px;">No tasks yet.</div>`;
     }else{
       for(const t of tasks){
-        const active = (selected.project === p.name && selected.taskId === t.id) ? "active" : "";
-        html += `<div class="task ${active}" data-action="selectTask" data-projectid="${p.id}" data-project="${esc(p.name)}" data-taskid="${t.id}">
-          <span>${esc(t.name)}</span>
-          <div class="task-right">
-            <button class="xbtn" data-action="deleteTask" data-projectid="${p.id}" data-taskid="${t.id}" title="Delete task">×</button>
-            <small>→</small>
-          </div>
+        const active = (selected.project === project && selected.taskId === t.id) ? "active" : "";
+        html += `<div class="task ${active}" data-action="selectTask" data-project="${project}" data-taskid="${t.id}">
+          <span>${t.name}</span>
+          <small>→</small>
         </div>`;
       }
     }
@@ -1548,24 +1558,15 @@ function renderSidebar(){
   projectsRoot.innerHTML = html;
 }
 
-/* IMPORTANT:
-   - We grab the closest [data-action] so delete buttons win.
-   - We stopPropagation on delete so it never triggers selectTask.
-*/
 projectsRoot.addEventListener("click", (e) => {
   const el = e.target.closest("[data-action]");
   if(!el) return;
 
   const action = el.getAttribute("data-action");
-  const projectId = el.getAttribute("data-projectid");
-
-  if(action === "deleteTask" || action === "deleteProject"){
-    e.preventDefault();
-    e.stopPropagation();
-  }
+  const project = el.getAttribute("data-project");
 
   if(action === "toggleAdd"){
-    const row = document.getElementById(`add-${safeId(projectId)}`);
+    const row = document.getElementById(`add-${safeId(project)}`);
     if(!row) return;
     row.classList.toggle("show");
     const inp = row.querySelector("input");
@@ -1574,17 +1575,14 @@ projectsRoot.addEventListener("click", (e) => {
   }
 
   if(action === "addTask"){
-    const row = document.getElementById(`add-${safeId(projectId)}`);
+    const row = document.getElementById(`add-${safeId(project)}`);
     if(!row) return;
     const inp = row.querySelector("input");
     const name = (inp?.value || "").trim();
     if(!name) return;
 
-    const p = projects.find(x => x.id === projectId);
-    if(!p) return;
-    p.tasks = p.tasks || [];
-    p.tasks.push({ id: uid(), name });
-    saveProjects();
+    tasksByProject[project].push({ id: uid(), name });
+    saveJSON(STORAGE_TASKS, tasksByProject);
 
     inp.value = "";
     row.classList.remove("show");
@@ -1594,9 +1592,8 @@ projectsRoot.addEventListener("click", (e) => {
   }
 
   if(action === "selectTask"){
-    const projectName = el.getAttribute("data-project");
     const taskId = el.getAttribute("data-taskid");
-    selected.project = projectName;
+    selected.project = project;
     selected.taskId = taskId;
     persistUI();
 
@@ -1604,92 +1601,6 @@ projectsRoot.addEventListener("click", (e) => {
     updateSelectedLabels();
     return;
   }
-
-  if(action === "deleteTask"){
-    const taskId = el.getAttribute("data-taskid");
-    const p = projects.find(x => x.id === projectId);
-    if(!p) return;
-    const t = (p.tasks||[]).find(x => x.id === taskId);
-    if(!t) return;
-
-    const ok = confirm(`Delete task "${t.name}"?`);
-    if(!ok) return;
-
-    // if deleting current task, stop timers + clear selection
-    if(selected.project === p.name && selected.taskId === taskId){
-      stopAllTimers(true);
-      selected.taskId = null;
-      selected.project = null;
-      persistUI();
-    }
-
-    p.tasks = (p.tasks||[]).filter(x => x.id !== taskId);
-    saveProjects();
-
-    renderSidebar();
-    updateSelectedLabels();
-    return;
-  }
-
-  if(action === "deleteProject"){
-    const p = projects.find(x => x.id === projectId);
-    if(!p) return;
-
-    const ok = confirm(`Delete project "${p.name}" and all its tasks?`);
-    if(!ok) return;
-
-    if(selected.project === p.name){
-      stopAllTimers(true);
-      selected.project = null;
-      selected.taskId = null;
-      persistUI();
-    }
-
-    projects = projects.filter(x => x.id !== projectId);
-    saveProjects();
-
-    renderSidebar();
-    updateSelectedLabels();
-    renderWeeklyLog();
-    return;
-  }
-});
-
-/* =========================
-   Add project UI
-========================= */
-toggleProjectAdd.onclick = () => {
-  projectAddRow.classList.toggle("show");
-  if(projectAddRow.classList.contains("show")){
-    setTimeout(()=>projectNameInput?.focus?.(), 0);
-  }
-};
-
-function addProject(){
-  const name = (projectNameInput.value || "").trim();
-  if(!name) return;
-
-  // avoid duplicates by name (simple)
-  if(projects.some(p => p.name.toLowerCase() === name.toLowerCase())){
-    projectNameInput.value = "";
-    projectAddRow.classList.remove("show");
-    return;
-  }
-
-  projects.push({ id: uid(), name, tasks: [] });
-  saveProjects();
-
-  projectNameInput.value = "";
-  projectAddRow.classList.remove("show");
-
-  renderSidebar();
-  renderWeeklyLog();
-}
-
-projectAddBtn.onclick = addProject;
-projectNameInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){ e.preventDefault(); addProject(); }
-  if(e.key === "Escape"){ projectAddRow.classList.remove("show"); }
 });
 
 /* =========================
