@@ -216,7 +216,9 @@ body{
 .project-name{
   font-weight:900;
   font-size:13px;
+  line-height:1.2;
 }
+
 .project-actions{
   display:flex;
   align-items:center;
@@ -232,6 +234,18 @@ body{
   font-weight:900;
   display:grid;
   place-items:center;
+}
+
+.trashbtn{
+  width:30px; height:30px;
+  border-radius:10px;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(255,255,255,.85);
+  cursor:pointer;
+  font-weight:900;
+  display:grid;
+  place-items:center;
+  opacity:.9;
 }
 
 .tasklist{
@@ -263,6 +277,23 @@ body{
   border-color: rgba(168,85,247,.55);
   box-shadow:0 10px 22px rgba(168,85,247,.10);
   background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(192,132,252,.12));
+}
+
+.task-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.task-del{
+  width:26px; height:26px;
+  border-radius:10px;
+  border:1px solid rgba(168,85,247,.18);
+  background: rgba(255,255,255,.90);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  line-height:1;
 }
 
 .addrow{
@@ -450,6 +481,23 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
         <div style="width:38px;"></div>
       </div>
 
+      <!-- Add Project row -->
+      <div class="sidebar-inner">
+        <div class="project" style="padding:10px;">
+          <div class="project-head">
+            <div class="project-name">Projects</div>
+            <div class="project-actions">
+              <button class="plusbtn" id="addProjectToggle" title="Add project">+</button>
+            </div>
+          </div>
+          <div class="addrow" id="addProjectRow">
+            <input type="text" id="projectNameInput" placeholder="New project…" />
+            <button id="addProjectBtn">Add</button>
+          </div>
+          <div class="mini" style="margin-top:8px;">Tip: puedes borrar proyectos/tareas cuando ya no los uses.</div>
+        </div>
+      </div>
+
       <div class="sidebar-inner" id="projectsRoot"></div>
 
       <div class="sidebar-inner mini">
@@ -487,7 +535,7 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
           </div>
         </div>
 
-        <!-- Row 2: Pomodoro inputs (hidden in Clock mode) -->
+        <!-- Row 2: Pomodoro inputs -->
         <div class="top" id="pomoSettingsRow" style="display:none;">
           <div class="pill">Focus <input id="focusMin" type="number" min="5" max="240" value="35" /> min</div>
           <div class="pill">Break <input id="shortBreakMin" type="number" min="1" max="90" value="10" /> min</div>
@@ -552,9 +600,35 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
 
 <script>
 /* =========================
-   Projects (fixed) + Storage
+   Storage keys
 ========================= */
-const PROJECTS = [
+const STORAGE_PROJECTS = "pomo_projects_v2";     // new
+const STORAGE_TASKS    = "pomo_tasks_v2";        // new (keyed by projectId)
+const STORAGE_SESSIONS = "pomo_sessions_v2";     // new (includes projectId + names)
+const STORAGE_UI       = "pomo_ui_v2";
+const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
+
+/* =========================
+   Helpers
+========================= */
+function uid(){
+  return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
+}
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    return JSON.parse(raw);
+  }catch(e){ return fallback; }
+}
+function saveJSON(key, value){
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+/* =========================
+   Migration defaults (your old fixed list)
+========================= */
+const DEFAULT_PROJECT_NAMES = [
   "Work (Celeste)",
   "Work (Lenny)",
   "Estudios",
@@ -563,28 +637,55 @@ const PROJECTS = [
   "Proyecto"
 ];
 
-const STORAGE_TASKS = "pomo_tasks_v1";
-const STORAGE_SESSIONS = "pomo_sessions_v1";
-const STORAGE_UI = "pomo_ui_v1";
-const STORAGE_COLLAPSE = STORAGE_UI + "_collapse";
+/* =========================
+   Projects + tasks data (dynamic)
+========================= */
+let projects = loadJSON(STORAGE_PROJECTS, null);
+// projects: [{id,name}]
+if(!projects){
+  // try migrate from older versions if present (v1 keys)
+  const oldTasks = loadJSON("pomo_tasks_v1", null);
+  if(oldTasks && typeof oldTasks === "object"){
+    // Use the keys as project names
+    const names = Object.keys(oldTasks);
+    projects = names.map(n => ({ id: uid(), name: n }));
+  }else{
+    projects = DEFAULT_PROJECT_NAMES.map(n => ({ id: uid(), name: n }));
+  }
+  saveJSON(STORAGE_PROJECTS, projects);
+}
 
-function uid(){
-  return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
-}
-function safeId(str){
-  return String(str).replace(/\W+/g,"_");
-}
-function loadJSON(key, fallback){
-  try{
-    const raw = localStorage.getItem(key);
-    if(!raw) return fallback;
-    return JSON.parse(raw);
-  }catch(e){
-    return fallback;
+let tasksByProjectId = loadJSON(STORAGE_TASKS, null);
+// tasksByProjectId: { [projectId]: [{id,name}] }
+if(!tasksByProjectId){
+  tasksByProjectId = {};
+  // migrate from v1 if possible
+  const oldTasks = loadJSON("pomo_tasks_v1", null);
+  if(oldTasks && typeof oldTasks === "object"){
+    for(const p of projects){
+      const oldList = oldTasks[p.name] || [];
+      tasksByProjectId[p.id] = oldList.map(t => ({ id: t.id || uid(), name: t.name || String(t) }));
+    }
+  }else{
+    for(const p of projects) tasksByProjectId[p.id] = [];
+  }
+  saveJSON(STORAGE_TASKS, tasksByProjectId);
+} else {
+  for(const p of projects){
+    if(!tasksByProjectId[p.id]) tasksByProjectId[p.id] = [];
   }
 }
-function saveJSON(key, value){
-  localStorage.setItem(key, JSON.stringify(value));
+
+let sessions = loadJSON(STORAGE_SESSIONS, []);
+// { ts, weekKey, dayKey, projectId, projectName, taskId, taskName, minutes }
+
+let selected = loadJSON(STORAGE_UI, { projectId:null, taskId:null });
+function persistUI(){ saveJSON(STORAGE_UI, selected); }
+
+function projectById(id){ return projects.find(p => p.id === id) || null; }
+function taskById(projectId, taskId){
+  const list = tasksByProjectId[projectId] || [];
+  return list.find(t => t.id === taskId) || null;
 }
 
 /* =========================
@@ -613,7 +714,7 @@ function prettyWeekLabel(key){
 }
 
 /* =========================
-   Day helpers (local time)
+   Day helpers
 ========================= */
 function dayKeyLocal(dateObj){
   const d = new Date(dateObj);
@@ -627,29 +728,6 @@ function dayNameFromKey(dayKey){
   const dt = new Date(y, m-1, d);
   return dt.toLocaleDateString("en-US", { weekday:"long" });
 }
-function dayNameShortFromKey(dayKey){
-  const [y,m,d] = dayKey.split("-").map(Number);
-  const dt = new Date(y, m-1, d);
-  return dt.toLocaleDateString("en-US", { weekday:"short" });
-}
-
-/* =========================
-   Data: tasks + sessions
-========================= */
-let tasksByProject = loadJSON(STORAGE_TASKS, null);
-if(!tasksByProject){
-  tasksByProject = {};
-  PROJECTS.forEach(p => tasksByProject[p] = []);
-  saveJSON(STORAGE_TASKS, tasksByProject);
-}else{
-  PROJECTS.forEach(p => { if(!tasksByProject[p]) tasksByProject[p] = []; });
-}
-
-let sessions = loadJSON(STORAGE_SESSIONS, []);
-// { ts, weekKey, project, taskId, taskName, minutes }
-
-let selected = loadJSON(STORAGE_UI, { project:null, taskId:null });
-function persistUI(){ saveJSON(STORAGE_UI, selected); }
 
 /* =========================
    Elements
@@ -696,6 +774,13 @@ const btnClock = document.getElementById("btnClock");
 const btnPomo  = document.getElementById("btnPomo");
 const pomoSettingsRow = document.getElementById("pomoSettingsRow");
 
+const projectsRoot = document.getElementById("projectsRoot");
+
+const addProjectToggle = document.getElementById("addProjectToggle");
+const addProjectRow = document.getElementById("addProjectRow");
+const projectNameInput = document.getElementById("projectNameInput");
+const addProjectBtn = document.getElementById("addProjectBtn");
+
 /* =========================
    Clamp helpers
 ========================= */
@@ -727,16 +812,15 @@ function unlockAudioOnUserGesture(){
   audioCtx?.resume?.().catch(()=>{});
 }
 
-// louder tick
 function playTick(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(523.25, t0); // C5
+  osc.frequency.setValueAtTime(523.25, t0);
   gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.01); // louder
+  gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
@@ -744,17 +828,16 @@ function playTick(){
   osc.stop(t0 + 0.2);
 }
 
-// louder chime
 function playChime(){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const master = audioCtx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02); // louder
+  master.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02);
   master.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.35);
   master.connect(audioCtx.destination);
 
-  const freqs = [659.25, 880.00, 987.77]; // E5, A5, B5
+  const freqs = [659.25, 880.00, 987.77];
   freqs.forEach((f, i) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -762,7 +845,7 @@ function playChime(){
     osc.frequency.setValueAtTime(f, t0);
     const start = t0 + i * 0.06;
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.85, start + 0.01); // louder
+    gain.gain.exponentialRampToValueAtTime(0.85, start + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.95);
     osc.connect(gain);
     gain.connect(master);
@@ -811,24 +894,33 @@ function stopPetals(){
 }
 
 /* =========================
-   Task selection helpers
+   Selection helpers
 ========================= */
 function selectedTaskObj(){
-  if(!selected?.project || !selected?.taskId) return null;
-  const list = tasksByProject[selected.project] || [];
-  return list.find(t => t.id === selected.taskId) || null;
+  if(!selected?.projectId || !selected?.taskId) return null;
+  const t = taskById(selected.projectId, selected.taskId);
+  if(!t) return null;
+  const p = projectById(selected.projectId);
+  if(!p) return null;
+  return { project:p, task:t };
 }
+
 function updateSelectedLabels(){
-  const t = selectedTaskObj();
-  if(!t){
+  const sel = selectedTaskObj();
+  if(!sel){
     currentTaskLabel.textContent = "—";
     currentProjectLabel.textContent = "—";
   }else{
-    currentTaskLabel.textContent = t.name;
-    currentProjectLabel.textContent = selected.project;
+    currentTaskLabel.textContent = sel.task.name;
+    currentProjectLabel.textContent = sel.project.name;
   }
   enforceStartLock();
 }
+
+function isAnyTimerRunning(){
+  return !!clockTimer || !!pomoTimer;
+}
+
 function enforceStartLock(){
   const hasTask = !!selectedTaskObj();
   if(!hasTask){
@@ -841,7 +933,7 @@ function enforceStartLock(){
 }
 
 /* =========================
-   Log + summaries
+   Logging + summaries
 ========================= */
 function sessionsThisWeek(){
   const wk = weekKey(new Date());
@@ -849,13 +941,15 @@ function sessionsThisWeek(){
 }
 
 function groupWeekly(slist){
-  // { project: { total, tasks: {taskName: minutes} } }
+  // { projectId: { projectName, total, tasks: {taskName: minutes} } }
   const out = {};
   for(const s of slist){
-    if(!out[s.project]) out[s.project] = { total:0, tasks:{} };
-    out[s.project].total += s.minutes;
-    if(!out[s.project].tasks[s.taskName]) out[s.project].tasks[s.taskName] = 0;
-    out[s.project].tasks[s.taskName] += s.minutes;
+    const pid = s.projectId || "unknown";
+    if(!out[pid]) out[pid] = { projectName: s.projectName || "Unknown", total:0, tasks:{} };
+    out[pid].projectName = s.projectName || out[pid].projectName;
+    out[pid].total += s.minutes || 0;
+    const tn = s.taskName || "Task";
+    out[pid].tasks[tn] = (out[pid].tasks[tn] || 0) + (s.minutes || 0);
   }
   return out;
 }
@@ -864,8 +958,8 @@ function groupDays(slist){
   // { dayKey: minutes }
   const out = {};
   for(const s of slist){
-    const d = dayKeyLocal(new Date(s.ts));
-    out[d] = (out[d] || 0) + (s.minutes || 0);
+    const dk = s.dayKey || dayKeyLocal(new Date(s.ts));
+    out[dk] = (out[dk] || 0) + (s.minutes || 0);
   }
   return out;
 }
@@ -880,9 +974,8 @@ function computeTodayMinutes(){
   const slist = sessionsThisWeek();
   let sum = 0;
   for(const s of slist){
-    if(dayKeyLocal(new Date(s.ts)) === todayKey){
-      sum += (s.minutes || 0);
-    }
+    const dk = s.dayKey || dayKeyLocal(new Date(s.ts));
+    if(dk === todayKey) sum += (s.minutes || 0);
   }
   return sum;
 }
@@ -890,7 +983,7 @@ function computeTodayMinutes(){
 function renderPastWeeks(){
   const current = weekKey(new Date());
   const keys = Array.from(new Set(sessions.map(s => s.weekKey)))
-    .filter(k => k !== current)
+    .filter(k => k && k !== current)
     .sort((a,b) => b.localeCompare(a));
 
   if(keys.length === 0){
@@ -907,7 +1000,6 @@ function renderPastWeeks(){
     let weekTotal = 0;
     Object.values(grouped).forEach(p => weekTotal += p.total);
 
-    // Build Monday->Sunday order for that week
     const [yy,mm,dd] = k.split("-").map(Number);
     const monday = new Date(yy, mm-1, dd);
     const orderedKeys = [];
@@ -951,19 +1043,20 @@ function renderWeeklyLog(){
 
   focusedLabel.textContent = String(focusedMin);
   goalLabel.textContent = String(goalMinutes());
-
   weeklyMetaEl.textContent = `This week focus: ${focusedMin} min   |   Today: ${todayMin} min`;
 
-  // Render weekly grouped view (by project/tasks)
   if(Object.keys(grouped).length === 0){
     weeklyLogEl.innerHTML = `<div class="mini">No focus minutes logged yet this week.</div>`;
   }else{
     let html = "";
-    for(const project of PROJECTS){
-      if(!grouped[project]) continue;
-      const p = grouped[project];
+    // show in current projects order when possible
+    const orderedPids = projects.map(p => p.id);
+    const pids = Array.from(new Set([...orderedPids, ...Object.keys(grouped)]));
+    for(const pid of pids){
+      if(!grouped[pid]) continue;
+      const p = grouped[pid];
       html += `<div style="margin-bottom:10px;">
-        <div style="font-weight:900;">${project} — ${p.total} min</div>
+        <div style="font-weight:900;">${p.projectName} — ${p.total} min</div>
         <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">`;
       const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
       for(const [taskName, mins] of taskEntries){
@@ -977,11 +1070,10 @@ function renderWeeklyLog(){
     weeklyLogEl.innerHTML = html;
   }
 
-  // Past days (this week) toggle: show Monday..yesterday
+  // Past days toggle for current week (Mon..yesterday)
   const todayKey = dayKeyLocal(new Date());
   const dayTotals = groupDays(slist);
 
-  // Build Monday->Sunday for current week
   const monday = weekStartMonday(new Date());
   const orderedKeys = [];
   for(let i=0;i<7;i++){
@@ -989,12 +1081,7 @@ function renderWeeklyLog(){
     d.setDate(monday.getDate() + i);
     orderedKeys.push(dayKeyLocal(d));
   }
-
-  // Filter to past days only (exclude today, exclude future)
-  const pastKeys = orderedKeys.filter(k => {
-    // only keys before todayKey in lexicographic y-m-d order (works)
-    return k < todayKey;
-  });
+  const pastKeys = orderedKeys.filter(k => k < todayKey);
 
   if(pastKeys.length === 0){
     pastDaysWrap.style.display = "none";
@@ -1035,33 +1122,16 @@ function weeklySummaryText(){
     return lines.join("\n");
   }
 
-  for(const project of PROJECTS){
-    if(!grouped[project]) continue;
-    const p = grouped[project];
-    lines.push(`${project} — ${p.total} min`);
+  const orderedPids = projects.map(p => p.id);
+  const pids = Array.from(new Set([...orderedPids, ...Object.keys(grouped)]));
+
+  for(const pid of pids){
+    if(!grouped[pid]) continue;
+    const p = grouped[pid];
+    lines.push(`${p.projectName} — ${p.total} min`);
     const taskEntries = Object.entries(p.tasks).sort((a,b)=>b[1]-a[1]);
     for(const [taskName, mins] of taskEntries){
       lines.push(`  • ${taskName} — ${mins} min`);
-    }
-    lines.push("");
-  }
-
-  // Add past days breakdown (Mon..yesterday)
-  const todayKey = dayKeyLocal(new Date());
-  const monday = weekStartMonday(new Date());
-  const orderedKeys = [];
-  for(let i=0;i<7;i++){
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    orderedKeys.push(dayKeyLocal(d));
-  }
-  const dayTotals = groupDays(slist);
-  const pastKeys = orderedKeys.filter(k => k < todayKey);
-
-  if(pastKeys.length){
-    lines.push("Past days (this week):");
-    for(const dk of pastKeys){
-      lines.push(`  • ${dayNameFromKey(dk)} — ${(dayTotals[dk]||0)} min`);
     }
     lines.push("");
   }
@@ -1070,15 +1140,17 @@ function weeklySummaryText(){
 }
 
 function logFocusSession(minutes){
-  const t = selectedTaskObj();
-  if(!t) return;
+  const sel = selectedTaskObj();
+  if(!sel) return;
 
   const entry = {
     ts: new Date().toISOString(),
     weekKey: weekKey(new Date()),
-    project: selected.project,
-    taskId: t.id,
-    taskName: t.name,
+    dayKey: dayKeyLocal(new Date()),
+    projectId: sel.project.id,
+    projectName: sel.project.name,
+    taskId: sel.task.id,
+    taskName: sel.task.name,
     minutes
   };
   sessions.push(entry);
@@ -1102,9 +1174,7 @@ function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 let trackerMode = "clock";
 function setTrackerMode(m){
   if(m !== "clock" && m !== "pomo") return;
-
   stopAllTimers(true);
-
   trackerMode = m;
 
   if(trackerMode === "clock"){
@@ -1140,15 +1210,11 @@ function setTrackerMode(m){
 }
 
 /* =========================
-   CLOCK MODE state
+   CLOCK MODE
 ========================= */
 let clockTimer = null;
 let clockLastTick = null;
 let clockElapsedSec = 0;
-
-function isAnyTimerRunning(){
-  return !!clockTimer || !!pomoTimer;
-}
 
 function clockSetIdle(){
   clockElapsedSec = 0;
@@ -1160,8 +1226,6 @@ function clockSetIdle(){
 
 function renderClock(){
   timeEl.textContent = fmt(clockElapsedSec);
-
-  // ring loop: 60 minutes (visual only)
   const loop = 60 * 60;
   const prog = (clockElapsedSec % loop) / loop;
   ring.style.setProperty("--progress", clamp01(prog));
@@ -1169,18 +1233,13 @@ function renderClock(){
 
 function startClock(){
   if(clockTimer) return;
-
-  if(!selectedTaskObj()){
-    enforceStartLock();
-    return;
-  }
+  if(!selectedTaskObj()){ enforceStartLock(); return; }
 
   unlockAudioOnUserGesture();
   playTick();
   startPetals();
 
   clockLastTick = Date.now();
-
   clockTimer = setInterval(() => {
     const now = Date.now();
     const delta = Math.floor((now - clockLastTick) / 1000);
@@ -1204,22 +1263,17 @@ function pauseClock(){
   stopPetals();
   btnPause.disabled = true;
   btnStart.disabled = false;
-
   renderClock();
 }
 
 function clockOut(){
-  if(clockTimer){
-    pauseClock();
-  }
+  if(clockTimer) pauseClock();
 
   unlockAudioOnUserGesture();
   playChime();
 
   const minutes = Math.round(clockElapsedSec / 60);
-  if(minutes >= 1){
-    logFocusSession(minutes);
-  }
+  if(minutes >= 1) logFocusSession(minutes);
 
   clockSetIdle();
   stopPetals();
@@ -1227,7 +1281,7 @@ function clockOut(){
 }
 
 /* =========================
-   POMODORO MODE state
+   POMODORO MODE
 ========================= */
 let pomoMode = "focus";
 let pomos = 0;
@@ -1272,7 +1326,6 @@ function renderPomo(){
   ring.style.setProperty("--progress", clamp01(progress));
 
   const running = !!pomoTimer;
-
   focusInput.disabled = running;
   shortBreakInput.disabled = running;
   longBreakInput.disabled = running;
@@ -1291,20 +1344,15 @@ function logPartialFocusIfNeeded(){
 
   const elapsedSec = Math.max(0, focusStartedRemaining - remaining);
   const minutes = Math.round(elapsedSec / 60);
-  if(minutes >= 1){
-    logFocusSession(minutes);
-  }
+  if(minutes >= 1) logFocusSession(minutes);
+
   blockStartTs = null;
   focusStartedRemaining = null;
 }
 
 function startPomodoro(){
   if(pomoTimer) return;
-
-  if(!selectedTaskObj()){
-    enforceStartLock();
-    return;
-  }
+  if(!selectedTaskObj()){ enforceStartLock(); return; }
 
   unlockAudioOnUserGesture();
   playTick();
@@ -1336,10 +1384,8 @@ function startPomodoro(){
 
       if(pomoMode === "focus"){
         logFocusSession(focusMinutes());
-
         blockStartTs = null;
         focusStartedRemaining = null;
-
         pomos += 1;
         setPomoMode("break");
       }else{
@@ -1379,10 +1425,7 @@ function skipPomodoroBlock(){
   pausePomodoro();
 
   if(pomoMode === "focus"){
-    if(!selectedTaskObj()){
-      enforceStartLock();
-      return;
-    }
+    if(!selectedTaskObj()){ enforceStartLock(); return; }
     pomos += 1;
     setPomoMode("break");
   }else{
@@ -1391,7 +1434,7 @@ function skipPomodoroBlock(){
 }
 
 /* =========================
-   Stop all timers helper
+   Stop all timers
 ========================= */
 function stopAllTimers(silent=false){
   if(clockTimer){
@@ -1407,13 +1450,10 @@ function stopAllTimers(silent=false){
   pomoLastTick = null;
 
   stopPetals();
-
   btnPause.disabled = true;
   btnStart.disabled = !selectedTaskObj();
 
-  if(!silent){
-    playChime();
-  }
+  if(!silent) playChime();
 }
 
 /* =========================
@@ -1463,10 +1503,11 @@ copyBtn.onclick = async () => {
   try{
     const txt = weeklySummaryText();
     await navigator.clipboard.writeText(txt);
-    copyHint.textContent = "Copied ✅ Paste it into Notion.";
-    setTimeout(()=> copyHint.textContent = "", 2500);
+    // NOTION EMBED: no “confirmation” UI; keep silent
+    copyHint.textContent = "";
   }catch(e){
-    copyHint.textContent = "Couldn’t copy automatically — your browser blocked clipboard.";
+    // silent
+    copyHint.textContent = "";
   }
 };
 
@@ -1479,6 +1520,9 @@ pastDaysToggleEl.onclick = () => {
   const isOpen = pastDaysEl.classList.toggle("show");
   pastDaysToggleEl.textContent = isOpen ? "▾ Past days (this week)" : "▸ Past days (this week)";
 };
+
+btnClock.onclick = () => setTrackerMode("clock");
+btnPomo.onclick  = () => setTrackerMode("pomo");
 
 /* =========================
    Inputs: normalize + refresh (Pomo only)
@@ -1515,27 +1559,71 @@ pastDaysToggleEl.onclick = () => {
 });
 
 /* =========================
-   Sidebar rendering
+   Project / Task CRUD UI
 ========================= */
-const projectsRoot = document.getElementById("projectsRoot");
+addProjectToggle.onclick = () => {
+  addProjectRow.classList.toggle("show");
+  if(addProjectRow.classList.contains("show")){
+    setTimeout(()=>projectNameInput.focus(), 0);
+  }
+};
+
+function addProject(){
+  const name = (projectNameInput.value || "").trim();
+  if(!name) return;
+
+  const p = { id: uid(), name };
+  projects.push(p);
+  tasksByProjectId[p.id] = [];
+  saveJSON(STORAGE_PROJECTS, projects);
+  saveJSON(STORAGE_TASKS, tasksByProjectId);
+
+  projectNameInput.value = "";
+  addProjectRow.classList.remove("show");
+
+  renderSidebar();
+}
+
+addProjectBtn.onclick = addProject;
+projectNameInput.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter") addProject();
+});
+
+/* =========================
+   Sidebar rendering (with delete)
+========================= */
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
 
 function renderSidebar(){
-  let html = "";
-  for(const project of PROJECTS){
-    const tasks = tasksByProject[project] || [];
-    const addId = `add-${safeId(project)}`;
+  // ensure tasks containers exist for all projects
+  for(const p of projects){
+    if(!tasksByProjectId[p.id]) tasksByProjectId[p.id] = [];
+  }
 
-    html += `<div class="project" data-project="${project}">
+  let html = "";
+  for(const p of projects){
+    const tasks = tasksByProjectId[p.id] || [];
+    const addId = `add-task-${p.id}`;
+
+    html += `<div class="project" data-projectid="${p.id}">
       <div class="project-head">
-        <div class="project-name">${project}</div>
+        <div class="project-name">${escapeHtml(p.name)}</div>
         <div class="project-actions">
-          <button class="plusbtn" data-action="toggleAdd" data-project="${project}" title="Add task">+</button>
+          <button class="plusbtn" data-action="toggleAddTask" data-projectid="${p.id}" title="Add task">+</button>
+          <button class="trashbtn" data-action="deleteProject" data-projectid="${p.id}" title="Delete project">🗑</button>
         </div>
       </div>
 
       <div class="addrow" id="${addId}">
-        <input type="text" placeholder="New task…" data-project="${project}" />
-        <button data-action="addTask" data-project="${project}">Add</button>
+        <input type="text" placeholder="New task…" data-projectid="${p.id}" />
+        <button data-action="addTask" data-projectid="${p.id}">Add</button>
       </div>
 
       <div class="tasklist">`;
@@ -1544,10 +1632,13 @@ function renderSidebar(){
       html += `<div class="mini" style="padding:8px 4px;">No tasks yet.</div>`;
     }else{
       for(const t of tasks){
-        const active = (selected.project === project && selected.taskId === t.id) ? "active" : "";
-        html += `<div class="task ${active}" data-action="selectTask" data-project="${project}" data-taskid="${t.id}">
-          <span>${t.name}</span>
-          <small>→</small>
+        const active = (selected.projectId === p.id && selected.taskId === t.id) ? "active" : "";
+        html += `<div class="task ${active}" data-action="selectTask" data-projectid="${p.id}" data-taskid="${t.id}">
+          <span>${escapeHtml(t.name)}</span>
+          <span class="task-right">
+            <small>→</small>
+            <button class="task-del" data-action="deleteTask" data-projectid="${p.id}" data-taskid="${t.id}" title="Delete task">×</button>
+          </span>
         </div>`;
       }
     }
@@ -1563,10 +1654,11 @@ projectsRoot.addEventListener("click", (e) => {
   if(!el) return;
 
   const action = el.getAttribute("data-action");
-  const project = el.getAttribute("data-project");
+  const projectId = el.getAttribute("data-projectid");
+  const taskId = el.getAttribute("data-taskid");
 
-  if(action === "toggleAdd"){
-    const row = document.getElementById(`add-${safeId(project)}`);
+  if(action === "toggleAddTask"){
+    const row = document.getElementById(`add-task-${projectId}`);
     if(!row) return;
     row.classList.toggle("show");
     const inp = row.querySelector("input");
@@ -1575,14 +1667,14 @@ projectsRoot.addEventListener("click", (e) => {
   }
 
   if(action === "addTask"){
-    const row = document.getElementById(`add-${safeId(project)}`);
+    const row = document.getElementById(`add-task-${projectId}`);
     if(!row) return;
     const inp = row.querySelector("input");
     const name = (inp?.value || "").trim();
     if(!name) return;
 
-    tasksByProject[project].push({ id: uid(), name });
-    saveJSON(STORAGE_TASKS, tasksByProject);
+    (tasksByProjectId[projectId] ||= []).push({ id: uid(), name });
+    saveJSON(STORAGE_TASKS, tasksByProjectId);
 
     inp.value = "";
     row.classList.remove("show");
@@ -1591,9 +1683,52 @@ projectsRoot.addEventListener("click", (e) => {
     return;
   }
 
+  if(action === "deleteTask"){
+    // prevent task row click selection side-effect
+    e.preventDefault();
+    e.stopPropagation();
+
+    const list = tasksByProjectId[projectId] || [];
+    tasksByProjectId[projectId] = list.filter(t => t.id !== taskId);
+    saveJSON(STORAGE_TASKS, tasksByProjectId);
+
+    if(selected.projectId === projectId && selected.taskId === taskId){
+      selected.taskId = null;
+      persistUI();
+    }
+
+    renderSidebar();
+    updateSelectedLabels();
+    return;
+  }
+
+  if(action === "deleteProject"){
+    e.preventDefault();
+    e.stopPropagation();
+
+    // if running, stop silently
+    stopAllTimers(true);
+
+    projects = projects.filter(p => p.id !== projectId);
+    delete tasksByProjectId[projectId];
+
+    saveJSON(STORAGE_PROJECTS, projects);
+    saveJSON(STORAGE_TASKS, tasksByProjectId);
+
+    if(selected.projectId === projectId){
+      selected.projectId = null;
+      selected.taskId = null;
+      persistUI();
+    }
+
+    renderSidebar();
+    updateSelectedLabels();
+    renderWeeklyLog();
+    return;
+  }
+
   if(action === "selectTask"){
-    const taskId = el.getAttribute("data-taskid");
-    selected.project = project;
+    selected.projectId = projectId;
     selected.taskId = taskId;
     persistUI();
 
@@ -1619,24 +1754,18 @@ const collapseBtn = document.getElementById("collapseBtn");
 })();
 
 /* =========================
-   Toggle handlers
-========================= */
-btnClock.onclick = () => setTrackerMode("clock");
-btnPomo.onclick  = () => setTrackerMode("pomo");
-
-/* =========================
    Init
 ========================= */
 renderSidebar();
 updateSelectedLabels();
 renderWeeklyLog();
 
-// Initialize pomo internals safely
+// init pomo internals safely
 total = focusMinutes() * 60;
 remaining = total;
 setPomoMode("focus");
 
-// Default mode = clock
+// default = clock
 setTrackerMode("clock");
 clockSetIdle();
 renderWeeklyLog();
